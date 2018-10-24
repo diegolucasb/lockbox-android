@@ -7,16 +7,18 @@
 package mozilla.lockbox.presenter
 
 import io.reactivex.Observable
+import io.reactivex.functions.Consumer
 import io.reactivex.observers.TestObserver
 import io.reactivex.subjects.PublishSubject
-import junit.framework.Assert
 import mozilla.lockbox.R
 import mozilla.lockbox.action.RouteAction
+import mozilla.lockbox.extensions.AlertState
 import mozilla.lockbox.extensions.assertLastValue
 import mozilla.lockbox.flux.Action
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.model.ItemViewModel
 import mozilla.lockbox.store.DataStore
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,11 +29,10 @@ import org.robolectric.RobolectricTestRunner
 class ItemListPresenterTest {
     class FakeView : ItemListView {
         val itemSelectedStub = PublishSubject.create<ItemViewModel>()
+
         val filterClickStub = PublishSubject.create<Unit>()
         val menuItemSelectionStub = PublishSubject.create<Int>()
-
         var updateItemsArgument: List<ItemViewModel>? = null
-
         override val itemSelection: Observable<ItemViewModel>
             get() = itemSelectedStub
 
@@ -43,6 +44,13 @@ class ItemListPresenterTest {
 
         override fun updateItems(itemList: List<ItemViewModel>) {
             updateItemsArgument = itemList
+        }
+
+        override val isDeviceSecure: Boolean
+            get() = true
+
+        override fun displayPINDisclaimer(dialogObserver: Consumer<AlertState>) {
+            TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
         }
     }
 
@@ -132,8 +140,13 @@ class ItemListPresenterTest {
     fun `menuItem clicks cause RouteActions`() {
         view.menuItemSelectionStub.onNext(R.id.fragment_setting)
         dispatcherObserver.assertLastValue(RouteAction.SettingList)
+    }
 
-        view.menuItemSelectionStub.onNext(R.id.fragment_locked)
-        dispatcherObserver.assertLastValue(RouteAction.LockScreen)
+    @Test
+    fun `tapping on the locked menu item when the user does not have a PIN or biometrics`() {
+    }
+
+    @Test
+    fun `tapping on the locked menu item when the user has a PIN or biometrics`() {
     }
 }

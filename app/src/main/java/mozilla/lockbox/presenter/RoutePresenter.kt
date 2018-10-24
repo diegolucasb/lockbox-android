@@ -54,6 +54,9 @@ class RoutePresenter(
             is RouteAction.OpenWebsite -> {
                 openWebsite(destination.url)
             }
+            is RouteAction.SystemSetting -> {
+                openSetting(destination.setting)
+            }
             is RouteAction.FingerprintDialog -> showDialogFragment(FingerprintAuthDialogFragment())
 
             is RouteAction.Back -> navController.popBackStack()
@@ -116,5 +119,10 @@ class RoutePresenter(
     private fun openWebsite(url: String) {
         val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         activity.startActivity(browserIntent, null)
+    }
+
+    private fun openSetting(setting: String) {
+        val settingIntent = Intent(setting)
+        activity.startActivity(settingIntent, null)
     }
 }

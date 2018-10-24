@@ -6,6 +6,8 @@
 
 package mozilla.lockbox.view
 
+import android.app.KeyguardManager
+import android.content.Context
 import android.os.Bundle
 import android.support.design.widget.NavigationView
 import android.support.v4.view.GravityCompat
@@ -25,10 +27,13 @@ import com.jakewharton.rxbinding2.support.v7.widget.navigationClicks
 import com.jakewharton.rxbinding2.view.clicks
 import io.reactivex.Observable
 import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.functions.Consumer
 import io.reactivex.rxkotlin.addTo
 import kotlinx.android.synthetic.main.fragment_item_list.view.*
 import mozilla.lockbox.R
 import mozilla.lockbox.adapter.ItemListAdapter
+import mozilla.lockbox.extensions.AlertState
+import mozilla.lockbox.extensions.showAlertDialog
 import mozilla.lockbox.model.ItemViewModel
 import mozilla.lockbox.presenter.ItemListPresenter
 import mozilla.lockbox.presenter.ItemListView
@@ -36,7 +41,6 @@ import mozilla.lockbox.presenter.ItemListView
 class ItemListFragment : CommonFragment(), ItemListView {
     private val compositeDisposable = CompositeDisposable()
     private val adapter = ItemListAdapter()
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -98,7 +102,22 @@ class ItemListFragment : CommonFragment(), ItemListView {
                 .map { it.itemId }
         }
 
+    override val isDeviceSecure: Boolean
+        get() = (context!!.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).isDeviceSecure
+
     override fun updateItems(itemList: List<ItemViewModel>) {
         adapter.updateItems(itemList)
+    }
+
+    override fun displayPINDisclaimer(dialogObserver: Consumer<AlertState>) {
+        showAlertDialog(
+            context!!,
+            R.string.not_using_PIN_title,
+            R.string.not_using_PIN_message,
+            R.string.set_up_pin_button,
+            R.string.cancel
+        )
+            .subscribe(dialogObserver)
+            .addTo(compositeDisposable)
     }
 }

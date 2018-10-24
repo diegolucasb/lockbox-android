@@ -19,4 +19,5 @@ sealed class RouteAction : Action {
     object FingerprintDialog : RouteAction()
     data class ItemDetail(val id: String) : RouteAction()
     data class OpenWebsite(val url: String) : RouteAction()
+    data class SystemSetting(val setting: String) : RouteAction()
 }
