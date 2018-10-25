@@ -8,6 +8,7 @@ package mozilla.lockbox.presenter
 
 import io.reactivex.Observable
 import io.reactivex.rxkotlin.addTo
+import mozilla.lockbox.action.DataStoreAction
 import mozilla.lockbox.action.RouteAction
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.flux.Presenter
@@ -22,7 +23,7 @@ class LockedPresenter(
 ) : Presenter() {
     override fun onViewReady() {
         view.unlockButtonTaps
-                .subscribe { dispatcher.dispatch(RouteAction.ItemList) }
+                .subscribe { dispatcher.dispatch(DataStoreAction.Unlock) }
                 .addTo(compositeDisposable)
     }
 }

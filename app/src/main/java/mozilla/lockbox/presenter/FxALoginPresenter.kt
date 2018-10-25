@@ -8,6 +8,7 @@ package mozilla.lockbox.presenter
 
 import io.reactivex.Observable
 import io.reactivex.rxkotlin.addTo
+import mozilla.lockbox.action.DataStoreAction
 import mozilla.lockbox.action.RouteAction
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.flux.Presenter
@@ -19,7 +20,7 @@ interface FxALoginViewProtocol {
 class FxALoginPresenter(private val view: FxALoginViewProtocol, private val dispatcher: Dispatcher = Dispatcher.shared) : Presenter() {
     override fun onViewReady() {
         this.view.logMeInClicks.subscribe {
-            dispatcher.dispatch(RouteAction.ItemList)
+            dispatcher.dispatch(DataStoreAction.Unlock)
         }.addTo(compositeDisposable)
     }
 }

@@ -56,14 +56,11 @@ class ItemListPresenter(
         view.menuItemSelections
             .subscribe(this::onMenuItem)
             .addTo(compositeDisposable)
-
-        // TODO: remove this when we have proper locking / unlocking
-        dispatcher.dispatch(DataStoreAction.Unlock)
     }
 
     private fun onMenuItem(@IdRes item: Int) {
         val action = when (item) {
-            R.id.fragment_locked -> RouteAction.LockScreen
+            R.id.fragment_locked -> DataStoreAction.Lock
             R.id.fragment_setting -> RouteAction.SettingList
             else -> return log.error("Cannot route from item list menu")
         }
