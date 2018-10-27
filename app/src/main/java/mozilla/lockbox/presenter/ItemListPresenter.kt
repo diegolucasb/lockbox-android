@@ -21,12 +21,12 @@ import mozilla.lockbox.flux.Presenter
 import mozilla.lockbox.log
 import mozilla.lockbox.model.ItemViewModel
 import mozilla.lockbox.store.DataStore
+import mozilla.lockbox.store.FingerprintStore
 
 interface ItemListView {
     val itemSelection: Observable<ItemViewModel>
     val filterClicks: Observable<Unit>
     val menuItemSelections: Observable<Int>
-    val isDeviceSecure: Boolean
     fun updateItems(itemList: List<ItemViewModel>)
     fun displayPINDisclaimer(dialogObserver: Consumer<AlertState>)
 }
@@ -34,7 +34,8 @@ interface ItemListView {
 class ItemListPresenter(
     private val view: ItemListView,
     private val dispatcher: Dispatcher = Dispatcher.shared,
-    private val dataStore: DataStore = DataStore.shared
+    private val dataStore: DataStore = DataStore.shared,
+    private val fingerprintStore: FingerprintStore = FingerprintStore.shared
 ) : Presenter() {
     private val disclaimerDialogConsumer: Consumer<AlertState>
         get() = Consumer {
@@ -77,7 +78,7 @@ class ItemListPresenter(
     }
 
     private fun onMenuItem(@IdRes item: Int) {
-        if (!view.isDeviceSecure) {
+        if (item == R.id.fragment_locked && !fingerprintStore.isDeviceSecure) {
             view.displayPINDisclaimer(disclaimerDialogConsumer)
             return
         }

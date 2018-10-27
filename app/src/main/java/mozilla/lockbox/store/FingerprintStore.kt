@@ -77,6 +77,9 @@ open class FingerprintStore(
         authenticationCallback = AuthenticationCallback(context)
     }
 
+    open val isDeviceSecure: Boolean
+        get() = isFingerprintAuthAvailable() || keyguardManager.isDeviceSecure
+
     open val isFingerprintAuthAvailable: Boolean
         get() = fingerprintManager.isHardwareDetected && fingerprintManager.hasEnrolledFingerprints()
 

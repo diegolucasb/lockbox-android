@@ -7,6 +7,7 @@
 package mozilla.lockbox
 
 import android.app.Application
+import android.app.KeyguardManager
 import android.arch.lifecycle.ProcessLifecycleOwner
 import android.content.ClipboardManager
 import android.content.Context

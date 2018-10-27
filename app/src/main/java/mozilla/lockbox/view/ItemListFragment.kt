@@ -6,8 +6,6 @@
 
 package mozilla.lockbox.view
 
-import android.app.KeyguardManager
-import android.content.Context
 import android.os.Bundle
 import android.support.design.widget.NavigationView
 import android.support.v4.view.GravityCompat
@@ -101,9 +99,6 @@ class ItemListFragment : CommonFragment(), ItemListView {
                 }
                 .map { it.itemId }
         }
-
-    override val isDeviceSecure: Boolean
-        get() = (context!!.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).isDeviceSecure
 
     override fun updateItems(itemList: List<ItemViewModel>) {
         adapter.updateItems(itemList)

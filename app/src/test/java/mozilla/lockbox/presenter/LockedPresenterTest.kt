@@ -17,6 +17,8 @@ import mozilla.lockbox.view.FingerprintAuthDialogFragment.AuthCallback
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mock
+import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.verify
@@ -50,6 +52,8 @@ class LockedPresenterTest {
         override val onAuthentication: Observable<FingerprintAuthAction>
             get() = onAuth
     }
+    @Mock
+    val keyguardManager = Mockito.mock(KeyguardManager::class.java)
 
     val view = spy(FakeView())
     val fingerprintStore = spy(FakeFingerprintStore())

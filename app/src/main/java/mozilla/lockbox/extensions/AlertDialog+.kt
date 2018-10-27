@@ -42,7 +42,7 @@ fun showAlertDialog(
             }
         }
 
-            builder.setOnDismissListener {
+        builder.setOnDismissListener {
             // make sure to complete / dispose of observer when the dialog is no longer shown
             emitter.onComplete()
         }

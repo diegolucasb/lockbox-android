@@ -18,21 +18,28 @@ import mozilla.lockbox.flux.Action
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.model.ItemViewModel
 import mozilla.lockbox.store.DataStore
+import mozilla.lockbox.store.FingerprintStore
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mock
+import org.mockito.Mockito
 import org.mozilla.sync15.logins.ServerPassword
 import org.robolectric.RobolectricTestRunner
+import org.mockito.Mockito.`when` as whenCalled
 
 @RunWith(RobolectricTestRunner::class)
-class ItemListPresenterTest {
+open class ItemListPresenterTest {
     class FakeView : ItemListView {
         val itemSelectedStub = PublishSubject.create<ItemViewModel>()
 
         val filterClickStub = PublishSubject.create<Unit>()
         val menuItemSelectionStub = PublishSubject.create<Int>()
         var updateItemsArgument: List<ItemViewModel>? = null
+
+        val disclaimerActionStub = PublishSubject.create<AlertState>()
+
         override val itemSelection: Observable<ItemViewModel>
             get() = itemSelectedStub
 
@@ -46,11 +53,8 @@ class ItemListPresenterTest {
             updateItemsArgument = itemList
         }
 
-        override val isDeviceSecure: Boolean
-            get() = true
-
         override fun displayPINDisclaimer(dialogObserver: Consumer<AlertState>) {
-            TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
+            disclaimerActionStub.subscribe(dialogObserver)
         }
     }
 
@@ -61,9 +65,12 @@ class ItemListPresenterTest {
             get() = listStub
     }
 
+    @Mock
+    val fingerprintStore = Mockito.mock(FingerprintStore::class.java)
+
     val view = FakeView()
     val dataStore = FakeDataStore()
-    val subject = ItemListPresenter(view, dataStore = dataStore)
+    lateinit var subject: ItemListPresenter
 
     val dispatcherObserver = TestObserver.create<Action>()
 
@@ -71,6 +78,7 @@ class ItemListPresenterTest {
     fun setUp() {
         Dispatcher.shared.register.subscribe(dispatcherObserver)
 
+        subject = ItemListPresenter(view, dataStore = dataStore, fingerprintStore = fingerprintStore)
         subject.onViewReady()
     }
 
@@ -143,10 +151,34 @@ class ItemListPresenterTest {
     }
 
     @Test
-    fun `tapping on the locked menu item when the user does not have a PIN or biometrics`() {
+    fun `when there is no device security and the user taps Set Up on the dialog, route to settings`() {
+        whenCalled(fingerprintStore.isDeviceSecure).thenReturn(false)
+        setUp()
+        view.menuItemSelectionStub.onNext(R.id.fragment_locked)
+
+        view.disclaimerActionStub.onNext(AlertState.BUTTON_POSITIVE)
+        dispatcherObserver.assertLastValue(RouteAction.SystemSetting(android.provider.Settings.ACTION_SECURITY_SETTINGS))
+    }
+
+    @Test
+    fun `when there is no device security and the user taps anything else on the dialog, do nothing`() {
+        whenCalled(fingerprintStore.isDeviceSecure).thenReturn(false)
+        setUp()
+        view.menuItemSelectionStub.onNext(R.id.fragment_locked)
+
+        view.disclaimerActionStub.onNext(AlertState.BUTTON_NEGATIVE)
+        dispatcherObserver.assertNever(RouteAction.SystemSetting(android.provider.Settings.ACTION_SECURITY_SETTINGS))
+        dispatcherObserver.assertNever(RouteAction.LockScreen)
+
+        // still passes thru settings actions regardless of device security stance
+        view.menuItemSelectionStub.onNext(R.id.fragment_setting)
+        dispatcherObserver.assertLastValue(RouteAction.SettingList)
     }
 
     @Test
     fun `tapping on the locked menu item when the user has a PIN or biometrics`() {
+        whenCalled(fingerprintStore.isDeviceSecure).thenReturn(true)
+        view.menuItemSelectionStub.onNext(R.id.fragment_locked)
+        dispatcherObserver.assertLastValue(RouteAction.LockScreen)
     }
 }
