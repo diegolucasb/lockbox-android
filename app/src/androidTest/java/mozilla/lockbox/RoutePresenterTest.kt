@@ -73,6 +73,6 @@ open class RoutePresenterTest {
     @Test
     fun testLockScreen() {
         navigator.gotoLockScreen()
-        navigator.back(false)
+        navigator.back(true)
     }
 }
