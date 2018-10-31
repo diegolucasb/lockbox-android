@@ -25,7 +25,7 @@ class FingerprintStoreTest {
     val subject = FingerprintStore()
 
     @Test
-    fun isDeviceSecure_fingerprintSecure_notPINSecure() {
+    fun `isDeviceSecure when the device is fingerprint secure and not PIN or password secure`() {
         whenCalled(fingerprintManager.isHardwareDetected).thenReturn(true)
         whenCalled(fingerprintManager.hasEnrolledFingerprints()).thenReturn(true)
         whenCalled(keyguardManager.isDeviceSecure).thenReturn(false)
@@ -36,7 +36,7 @@ class FingerprintStoreTest {
     }
 
     @Test
-    fun isDeviceSecure_fingerprintHardware_noEnrolledFingers_notPINSecure() {
+    fun `isDeviceSecure when there is fingerprint hardware but there are no enrolled fingers and the device is not PIN or password secured`() {
         whenCalled(fingerprintManager.isHardwareDetected).thenReturn(true)
         whenCalled(fingerprintManager.hasEnrolledFingerprints()).thenReturn(false)
         whenCalled(keyguardManager.isDeviceSecure).thenReturn(false)
@@ -47,7 +47,18 @@ class FingerprintStoreTest {
     }
 
     @Test
-    fun isDeviceSecure_noFingerprintHardware_notPINSecure() {
+    fun `isDeviceSecure when there is fingerprint hardware but there are no enrolled fingers but the device is not PIN or password secured`() {
+        whenCalled(fingerprintManager.isHardwareDetected).thenReturn(true)
+        whenCalled(fingerprintManager.hasEnrolledFingerprints()).thenReturn(false)
+        whenCalled(keyguardManager.isDeviceSecure).thenReturn(true)
+
+        subject.apply(fingerprintManager, keyguardManager)
+
+        Assert.assertEquals(true, subject.isDeviceSecure)
+    }
+
+    @Test
+    fun `isDeviceSecure when there is no fingerprint hardware and the device is not PIN or password secured`() {
         whenCalled(fingerprintManager.isHardwareDetected).thenReturn(false)
         whenCalled(fingerprintManager.hasEnrolledFingerprints()).thenReturn(false)
         whenCalled(keyguardManager.isDeviceSecure).thenReturn(false)
@@ -58,7 +69,7 @@ class FingerprintStoreTest {
     }
 
     @Test
-    fun isDeviceSecure_noFingerprintHardware_PINSecure() {
+    fun `isDeviceSecure when there is no fingerprint hardware but the device is PIN or password secured`() {
         whenCalled(fingerprintManager.isHardwareDetected).thenReturn(false)
         whenCalled(fingerprintManager.hasEnrolledFingerprints()).thenReturn(false)
         whenCalled(keyguardManager.isDeviceSecure).thenReturn(true)

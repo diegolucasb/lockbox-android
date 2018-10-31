@@ -28,7 +28,7 @@ interface ItemListView {
     val filterClicks: Observable<Unit>
     val menuItemSelections: Observable<Int>
     fun updateItems(itemList: List<ItemViewModel>)
-    fun displayPINDisclaimer(dialogObserver: Consumer<AlertState>)
+    fun displaySecurityDisclaimer(dialogObserver: Consumer<AlertState>)
 }
 
 class ItemListPresenter(
@@ -39,15 +39,10 @@ class ItemListPresenter(
 ) : Presenter() {
     private val disclaimerDialogConsumer: Consumer<AlertState>
         get() = Consumer {
-            when (it) {
-                AlertState.BUTTON_POSITIVE -> {
+            if (it == AlertState.BUTTON_POSITIVE) {
                     dispatcher.dispatch(RouteAction.SystemSetting(android.provider.Settings.ACTION_SECURITY_SETTINGS))
                 }
-                else -> {
-                    // do nothing
-                }
             }
-        }
 
     override fun onViewReady() {
         dataStore.list
@@ -79,7 +74,7 @@ class ItemListPresenter(
 
     private fun onMenuItem(@IdRes item: Int) {
         if (item == R.id.fragment_locked && !fingerprintStore.isDeviceSecure) {
-            view.displayPINDisclaimer(disclaimerDialogConsumer)
+            view.displaySecurityDisclaimer(disclaimerDialogConsumer)
             return
         }
 

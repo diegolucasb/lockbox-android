@@ -104,7 +104,7 @@ class ItemListFragment : CommonFragment(), ItemListView {
         adapter.updateItems(itemList)
     }
 
-    override fun displayPINDisclaimer(dialogObserver: Consumer<AlertState>) {
+    override fun displaySecurityDisclaimer(dialogObserver: Consumer<AlertState>) {
         showAlertDialog(
             context!!,
             R.string.not_using_PIN_title,

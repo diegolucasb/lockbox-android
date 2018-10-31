@@ -53,7 +53,7 @@ open class ItemListPresenterTest {
             updateItemsArgument = itemList
         }
 
-        override fun displayPINDisclaimer(dialogObserver: Consumer<AlertState>) {
+        override fun displaySecurityDisclaimer(dialogObserver: Consumer<AlertState>) {
             disclaimerActionStub.subscribe(dialogObserver)
         }
     }
