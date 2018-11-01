@@ -14,7 +14,7 @@ import io.reactivex.rxkotlin.addTo
 import mozilla.lockbox.R
 import mozilla.lockbox.action.DataStoreAction
 import mozilla.lockbox.action.RouteAction
-import mozilla.lockbox.action.SettingIntentAction
+import mozilla.lockbox.action.SettingIntent
 import mozilla.lockbox.extensions.AlertState
 import mozilla.lockbox.extensions.mapToItemViewModelList
 import mozilla.lockbox.flux.Dispatcher
@@ -29,7 +29,6 @@ interface ItemListView {
     val filterClicks: Observable<Unit>
     val menuItemSelections: Observable<Int>
     fun updateItems(itemList: List<ItemViewModel>)
-    fun displaySecurityDisclaimer(dialogObserver: Consumer<AlertState>)
 }
 
 class ItemListPresenter(
@@ -41,7 +40,7 @@ class ItemListPresenter(
     private val disclaimerDialogConsumer: Consumer<AlertState>
         get() = Consumer {
             if (it == AlertState.BUTTON_POSITIVE) {
-                    dispatcher.dispatch(RouteAction.SystemSetting(SettingIntentAction.Security))
+                    dispatcher.dispatch(RouteAction.SystemSetting(SettingIntent.Security))
                 }
             }
 
@@ -74,13 +73,13 @@ class ItemListPresenter(
     }
 
     private fun onMenuItem(@IdRes item: Int) {
-        if (item == R.id.fragment_locked && !fingerprintStore.isDeviceSecure) {
-            view.displaySecurityDisclaimer(disclaimerDialogConsumer)
-            return
-        }
-
         val action = when (item) {
-            R.id.fragment_locked -> RouteAction.LockScreen
+            R.id.fragment_locked -> {
+                if (fingerprintStore.isDeviceSecure) RouteAction.LockScreen
+                else RouteAction.DialogAction.SecurityDisclaimerDialog(
+                    RouteAction.SystemSetting(SettingIntent.Security)
+                )
+            }
             R.id.fragment_setting -> RouteAction.SettingList
             else -> return log.error("Cannot route from item list menu")
         }

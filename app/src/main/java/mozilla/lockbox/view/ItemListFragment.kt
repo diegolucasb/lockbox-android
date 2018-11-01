@@ -103,16 +103,4 @@ class ItemListFragment : CommonFragment(), ItemListView {
     override fun updateItems(itemList: List<ItemViewModel>) {
         adapter.updateItems(itemList)
     }
-
-    override fun displaySecurityDisclaimer(dialogObserver: Consumer<AlertState>) {
-        AlertDialogHelper.showAlertDialog(
-            context!!,
-            R.string.not_using_PIN_title,
-            R.string.not_using_PIN_message,
-            R.string.set_up_pin_button,
-            R.string.cancel
-        )
-            .subscribe(dialogObserver)
-            .addTo(compositeDisposable)
-    }
 }
