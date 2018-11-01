@@ -14,6 +14,7 @@ import io.reactivex.rxkotlin.addTo
 import mozilla.lockbox.R
 import mozilla.lockbox.action.DataStoreAction
 import mozilla.lockbox.action.RouteAction
+import mozilla.lockbox.action.SettingIntentAction
 import mozilla.lockbox.extensions.AlertState
 import mozilla.lockbox.extensions.mapToItemViewModelList
 import mozilla.lockbox.flux.Dispatcher
@@ -40,7 +41,7 @@ class ItemListPresenter(
     private val disclaimerDialogConsumer: Consumer<AlertState>
         get() = Consumer {
             if (it == AlertState.BUTTON_POSITIVE) {
-                    dispatcher.dispatch(RouteAction.SystemSetting(android.provider.Settings.ACTION_SECURITY_SETTINGS))
+                    dispatcher.dispatch(RouteAction.SystemSetting(SettingIntentAction.Security))
                 }
             }
 

@@ -55,7 +55,7 @@ class RoutePresenter(
                 openWebsite(destination.url)
             }
             is RouteAction.SystemSetting -> {
-                openSetting(destination.setting)
+                openSetting(destination.setting.settingActionIntent)
             }
             is RouteAction.FingerprintDialog -> showDialogFragment(FingerprintAuthDialogFragment())
 

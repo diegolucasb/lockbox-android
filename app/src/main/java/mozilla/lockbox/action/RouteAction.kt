@@ -19,5 +19,9 @@ sealed class RouteAction : Action {
     object FingerprintDialog : RouteAction()
     data class ItemDetail(val id: String) : RouteAction()
     data class OpenWebsite(val url: String) : RouteAction()
-    data class SystemSetting(val setting: String) : RouteAction()
+    data class SystemSetting(val setting: SettingIntentAction) : RouteAction()
+}
+
+enum class SettingIntentAction(val settingActionIntent: String) {
+    Security(android.provider.Settings.ACTION_SECURITY_SETTINGS)
 }

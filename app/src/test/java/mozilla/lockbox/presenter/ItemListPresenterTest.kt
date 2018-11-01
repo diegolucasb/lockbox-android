@@ -12,6 +12,7 @@ import io.reactivex.observers.TestObserver
 import io.reactivex.subjects.PublishSubject
 import mozilla.lockbox.R
 import mozilla.lockbox.action.RouteAction
+import mozilla.lockbox.action.SettingIntentAction
 import mozilla.lockbox.extensions.AlertState
 import mozilla.lockbox.extensions.assertLastValue
 import mozilla.lockbox.flux.Action
@@ -157,7 +158,7 @@ open class ItemListPresenterTest {
         view.menuItemSelectionStub.onNext(R.id.fragment_locked)
 
         view.disclaimerActionStub.onNext(AlertState.BUTTON_POSITIVE)
-        dispatcherObserver.assertLastValue(RouteAction.SystemSetting(android.provider.Settings.ACTION_SECURITY_SETTINGS))
+        dispatcherObserver.assertLastValue(RouteAction.SystemSetting(SettingIntentAction.Security))
     }
 
     @Test
@@ -167,7 +168,7 @@ open class ItemListPresenterTest {
         view.menuItemSelectionStub.onNext(R.id.fragment_locked)
 
         view.disclaimerActionStub.onNext(AlertState.BUTTON_NEGATIVE)
-        dispatcherObserver.assertNever(RouteAction.SystemSetting(android.provider.Settings.ACTION_SECURITY_SETTINGS))
+        dispatcherObserver.assertNever(RouteAction.SystemSetting(SettingIntentAction.Security))
         dispatcherObserver.assertNever(RouteAction.LockScreen)
 
         // still passes thru settings actions regardless of device security stance
