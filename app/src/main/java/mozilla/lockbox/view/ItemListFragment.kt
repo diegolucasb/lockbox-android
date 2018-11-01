@@ -30,8 +30,8 @@ import io.reactivex.rxkotlin.addTo
 import kotlinx.android.synthetic.main.fragment_item_list.view.*
 import mozilla.lockbox.R
 import mozilla.lockbox.adapter.ItemListAdapter
+import mozilla.lockbox.extensions.AlertDialogHelper
 import mozilla.lockbox.extensions.AlertState
-import mozilla.lockbox.extensions.showAlertDialog
 import mozilla.lockbox.model.ItemViewModel
 import mozilla.lockbox.presenter.ItemListPresenter
 import mozilla.lockbox.presenter.ItemListView
@@ -105,7 +105,7 @@ class ItemListFragment : CommonFragment(), ItemListView {
     }
 
     override fun displaySecurityDisclaimer(dialogObserver: Consumer<AlertState>) {
-        showAlertDialog(
+        AlertDialogHelper.showAlertDialog(
             context!!,
             R.string.not_using_PIN_title,
             R.string.not_using_PIN_message,

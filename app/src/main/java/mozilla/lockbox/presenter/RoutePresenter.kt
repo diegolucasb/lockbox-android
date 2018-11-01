@@ -23,6 +23,10 @@ import mozilla.lockbox.store.RouteStore
 import mozilla.lockbox.view.FingerprintAuthDialogFragment
 import mozilla.lockbox.view.ItemDetailFragmentArgs
 
+interface RootView {
+
+}
+
 class RoutePresenter(
     private val activity: AppCompatActivity,
     private val routeStore: RouteStore = RouteStore.shared
