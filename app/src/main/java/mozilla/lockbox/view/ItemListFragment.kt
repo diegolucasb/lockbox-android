@@ -25,13 +25,10 @@ import com.jakewharton.rxbinding2.support.v7.widget.navigationClicks
 import com.jakewharton.rxbinding2.view.clicks
 import io.reactivex.Observable
 import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.functions.Consumer
 import io.reactivex.rxkotlin.addTo
 import kotlinx.android.synthetic.main.fragment_item_list.view.*
 import mozilla.lockbox.R
 import mozilla.lockbox.adapter.ItemListAdapter
-import mozilla.lockbox.extensions.AlertDialogHelper
-import mozilla.lockbox.extensions.AlertState
 import mozilla.lockbox.model.ItemViewModel
 import mozilla.lockbox.presenter.ItemListPresenter
 import mozilla.lockbox.presenter.ItemListView

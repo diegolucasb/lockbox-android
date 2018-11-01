@@ -27,10 +27,6 @@ import mozilla.lockbox.store.RouteStore
 import mozilla.lockbox.view.FingerprintAuthDialogFragment
 import mozilla.lockbox.view.ItemDetailFragmentArgs
 
-interface RootView {
-
-}
-
 class RoutePresenter(
     private val activity: AppCompatActivity,
     private val dispatcher: Dispatcher = Dispatcher.shared,
@@ -109,11 +105,11 @@ class RoutePresenter(
 
     private fun showSecurityDisclaimerDialog(): Observable<AlertState> {
         return AlertDialogHelper.showAlertDialog(
-                activity,
-                R.string.not_using_PIN_title,
-                R.string.not_using_PIN_message,
-                R.string.set_up_pin_button,
-                R.string.cancel
+            activity,
+            R.string.not_using_PIN_title,
+            R.string.not_using_PIN_message,
+            R.string.set_up_pin_button,
+            R.string.cancel
         )
     }
 

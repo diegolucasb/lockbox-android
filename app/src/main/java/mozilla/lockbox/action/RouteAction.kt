@@ -24,7 +24,7 @@ sealed class RouteAction : Action {
     sealed class DialogAction(
         val positiveButtonAction: Action? = null,
         val negativeButtonAction: Action? = null
-    ): RouteAction() {
+    ) : RouteAction() {
         class SecurityDisclaimerDialog(setUpAction: Action) : DialogAction(positiveButtonAction = setUpAction)
     }
 }

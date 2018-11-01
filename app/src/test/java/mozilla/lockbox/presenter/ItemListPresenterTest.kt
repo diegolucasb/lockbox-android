@@ -7,7 +7,6 @@
 package mozilla.lockbox.presenter
 
 import io.reactivex.Observable
-import io.reactivex.functions.Consumer
 import io.reactivex.observers.TestObserver
 import io.reactivex.subjects.PublishSubject
 import mozilla.lockbox.R
@@ -52,10 +51,6 @@ open class ItemListPresenterTest {
 
         override fun updateItems(itemList: List<ItemViewModel>) {
             updateItemsArgument = itemList
-        }
-
-        override fun displaySecurityDisclaimer(dialogObserver: Consumer<AlertState>) {
-            disclaimerActionStub.subscribe(dialogObserver)
         }
     }
 
@@ -152,32 +147,21 @@ open class ItemListPresenterTest {
     }
 
     @Test
-    fun `when there is no device security and the user taps Set Up on the dialog, route to settings`() {
+    fun `tapping on the lock menu item when the user has no device security routes to security disclaimer dialog`() {
         whenCalled(fingerprintStore.isDeviceSecure).thenReturn(false)
         setUp()
         view.menuItemSelectionStub.onNext(R.id.fragment_locked)
 
         view.disclaimerActionStub.onNext(AlertState.BUTTON_POSITIVE)
-        dispatcherObserver.assertLastValue(RouteAction.SystemSetting(SettingIntent.Security))
+        val routeAction = dispatcherObserver.values().last() as RouteAction.DialogAction
+
+        Assert.assertTrue(routeAction is RouteAction.DialogAction.SecurityDisclaimerDialog)
+
+        Assert.assertEquals(RouteAction.SystemSetting(SettingIntent.Security), routeAction.positiveButtonAction)
     }
 
     @Test
-    fun `when there is no device security and the user taps anything else on the dialog, do nothing`() {
-        whenCalled(fingerprintStore.isDeviceSecure).thenReturn(false)
-        setUp()
-        view.menuItemSelectionStub.onNext(R.id.fragment_locked)
-
-        view.disclaimerActionStub.onNext(AlertState.BUTTON_NEGATIVE)
-        dispatcherObserver.assertNever(RouteAction.SystemSetting(SettingIntent.Security))
-        dispatcherObserver.assertNever(RouteAction.LockScreen)
-
-        // still passes thru settings actions regardless of device security stance
-        view.menuItemSelectionStub.onNext(R.id.fragment_setting)
-        dispatcherObserver.assertLastValue(RouteAction.SettingList)
-    }
-
-    @Test
-    fun `tapping on the locked menu item when the user has a PIN or biometrics`() {
+    fun `tapping on the lock menu item when the user has device security routes to lock screen`() {
         whenCalled(fingerprintStore.isDeviceSecure).thenReturn(true)
         view.menuItemSelectionStub.onNext(R.id.fragment_locked)
         dispatcherObserver.assertLastValue(RouteAction.LockScreen)

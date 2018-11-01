@@ -9,13 +9,6 @@ package mozilla.lockbox
 import android.support.test.espresso.Espresso.closeSoftKeyboard
 import android.support.test.espresso.Espresso.pressBack
 import android.support.test.espresso.NoActivityResumedException
-import android.support.test.espresso.action.ViewActions.click
-import android.support.test.espresso.assertion.ViewAssertions.matches
-import android.support.test.espresso.contrib.DrawerActions.open
-import android.support.test.espresso.contrib.NavigationViewActions.navigateTo
-import android.support.test.espresso.matcher.ViewMatchers.isDisplayed
-import android.support.test.espresso.matcher.ViewMatchers.withId
-import android.support.test.espresso.matcher.ViewMatchers.withText
 import junit.framework.Assert
 import mozilla.lockbox.robots.filteredItemList
 import mozilla.lockbox.robots.fxaLogin

@@ -77,7 +77,7 @@ class LockedPresenterTest {
     @Test
     fun `unlock button tap fallback if no fingerprint`() {
         `when`(fingerprintStore.isFingerprintAuthAvailable).thenReturn(false)
-        `when`(fingerprintStore.isKeyguardSecure).thenReturn(true)
+        `when`(fingerprintStore.isKeyguardDeviceSecure).thenReturn(true)
         view.unlockButtonTaps.onNext(Unit)
         verify(view).unlockFallback()
     }
@@ -85,7 +85,7 @@ class LockedPresenterTest {
     @Test
     fun `unlock button tap fallback on fingerprint error`() {
         `when`(fingerprintStore.isFingerprintAuthAvailable).thenReturn(true)
-        `when`(fingerprintStore.isKeyguardSecure).thenReturn(true)
+        `when`(fingerprintStore.isKeyguardDeviceSecure).thenReturn(true)
         lockedStore.onAuth.onNext(FingerprintAuthAction.OnAuthentication(AuthCallback.OnError))
         verify(view).unlockFallback()
     }
@@ -98,7 +98,7 @@ class LockedPresenterTest {
 
     @Test
     fun `handle error authentication callback`() {
-        `when`(fingerprintStore.isKeyguardSecure).thenReturn(false)
+        `when`(fingerprintStore.isKeyguardDeviceSecure).thenReturn(false)
         lockedStore.onAuth.onNext(FingerprintAuthAction.OnAuthentication(AuthCallback.OnError))
         dispatcherObserver.assertLastValue(RouteAction.LockScreen)
     }

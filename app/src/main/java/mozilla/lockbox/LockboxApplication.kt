@@ -7,7 +7,6 @@
 package mozilla.lockbox
 
 import android.app.Application
-import android.app.KeyguardManager
 import android.arch.lifecycle.ProcessLifecycleOwner
 import android.content.ClipboardManager
 import android.content.Context
@@ -21,8 +20,8 @@ import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.log.sink.AndroidLogSink
 import mozilla.lockbox.presenter.ApplicationPresenter
 import mozilla.lockbox.store.ClipboardStore
-import mozilla.lockbox.store.SettingStore
 import mozilla.lockbox.store.FingerprintStore
+import mozilla.lockbox.store.SettingStore
 import mozilla.lockbox.store.TelemetryStore
 import mozilla.lockbox.support.SecurePreferences
 

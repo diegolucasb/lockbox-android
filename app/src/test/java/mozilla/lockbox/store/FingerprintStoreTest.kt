@@ -7,6 +7,7 @@
 package mozilla.lockbox.store
 
 import android.app.KeyguardManager
+import android.content.Context
 import android.hardware.fingerprint.FingerprintManager
 import org.junit.Assert
 import org.junit.Test
@@ -22,6 +23,9 @@ class FingerprintStoreTest {
     @Mock
     val keyguardManager = Mockito.mock(KeyguardManager::class.java)
 
+    @Mock
+    val context = Mockito.mock(Context::class.java)
+
     val subject = FingerprintStore()
 
     @Test
@@ -30,9 +34,9 @@ class FingerprintStoreTest {
         whenCalled(fingerprintManager.hasEnrolledFingerprints()).thenReturn(true)
         whenCalled(keyguardManager.isDeviceSecure).thenReturn(false)
 
-        subject.apply(fingerprintManager, keyguardManager)
+        applyMockContext()
 
-        Assert.assertEquals(true, subject.isDeviceSecure)
+        Assert.assertTrue(subject.isDeviceSecure)
     }
 
     @Test
@@ -41,20 +45,9 @@ class FingerprintStoreTest {
         whenCalled(fingerprintManager.hasEnrolledFingerprints()).thenReturn(false)
         whenCalled(keyguardManager.isDeviceSecure).thenReturn(false)
 
-        subject.apply(fingerprintManager, keyguardManager)
+        applyMockContext()
 
-        Assert.assertEquals(false, subject.isDeviceSecure)
-    }
-
-    @Test
-    fun `isDeviceSecure when there is fingerprint hardware but there are no enrolled fingers but the device is not PIN or password secured`() {
-        whenCalled(fingerprintManager.isHardwareDetected).thenReturn(true)
-        whenCalled(fingerprintManager.hasEnrolledFingerprints()).thenReturn(false)
-        whenCalled(keyguardManager.isDeviceSecure).thenReturn(true)
-
-        subject.apply(fingerprintManager, keyguardManager)
-
-        Assert.assertEquals(true, subject.isDeviceSecure)
+        Assert.assertFalse(subject.isDeviceSecure)
     }
 
     @Test
@@ -63,9 +56,9 @@ class FingerprintStoreTest {
         whenCalled(fingerprintManager.hasEnrolledFingerprints()).thenReturn(false)
         whenCalled(keyguardManager.isDeviceSecure).thenReturn(false)
 
-        subject.apply(fingerprintManager, keyguardManager)
+        applyMockContext()
 
-        Assert.assertEquals(false, subject.isDeviceSecure)
+        Assert.assertFalse(subject.isDeviceSecure)
     }
 
     @Test
@@ -74,8 +67,15 @@ class FingerprintStoreTest {
         whenCalled(fingerprintManager.hasEnrolledFingerprints()).thenReturn(false)
         whenCalled(keyguardManager.isDeviceSecure).thenReturn(true)
 
-        subject.apply(fingerprintManager, keyguardManager)
+        applyMockContext()
 
-        Assert.assertEquals(true, subject.isDeviceSecure)
+        Assert.assertTrue(subject.isDeviceSecure)
+    }
+
+    private fun applyMockContext() {
+        whenCalled(context.getSystemService(Context.FINGERPRINT_SERVICE)).thenReturn(fingerprintManager)
+        whenCalled(context.getSystemService(Context.KEYGUARD_SERVICE)).thenReturn(keyguardManager)
+
+        subject.applyContext(context)
     }
 }

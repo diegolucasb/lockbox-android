@@ -80,12 +80,12 @@ open class FingerprintStore(
     }
 
     open val isDeviceSecure: Boolean
-        get() = isFingerprintAuthAvailable || this.keyguardManager.isDeviceSecure
+        get() = isFingerprintAuthAvailable || isKeyguardDeviceSecure
 
     open val isFingerprintAuthAvailable: Boolean
         get() = fingerprintManager.isHardwareDetected && fingerprintManager.hasEnrolledFingerprints()
 
-    val isKeyguardSecure get() = keyguardManager.isKeyguardSecure
+    val isKeyguardDeviceSecure get() = keyguardManager.isDeviceSecure
 
     private fun initFingerprint() {
         setupKeyStoreAndKeyGenerator()
