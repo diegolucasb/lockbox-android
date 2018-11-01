@@ -65,6 +65,7 @@ class ItemListPresenter(
         val action = when (item) {
             R.id.fragment_locked -> RouteAction.LockScreen
             R.id.fragment_setting -> RouteAction.SettingList
+            R.id.fragment_account -> RouteAction.FxaAccount
             else -> return log.error("Cannot route from item list menu")
         }
 

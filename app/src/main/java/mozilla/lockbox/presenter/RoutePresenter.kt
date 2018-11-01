@@ -40,6 +40,7 @@ class RoutePresenter(
             is RouteAction.Login -> navigateToFragment(destination, R.id.fragment_fxa_login)
             is RouteAction.ItemList -> navigateToFragment(destination, R.id.fragment_item_list)
             is RouteAction.SettingList -> navigateToFragment(destination, R.id.fragment_setting)
+            is RouteAction.FxaAccount -> navigateToFragment(destination, R.id.fragment_account)
             is RouteAction.LockScreen -> navigateToFragment(destination, R.id.fragment_locked)
             is RouteAction.Filter -> navigateToFragment(destination, R.id.fragment_filter)
             is RouteAction.ItemDetail -> {
@@ -104,6 +105,7 @@ class RoutePresenter(
 
             Pair(R.id.fragment_item_list, R.id.fragment_item_detail) -> return R.id.action_itemList_to_itemDetail
             Pair(R.id.fragment_item_list, R.id.fragment_setting) -> return R.id.action_itemList_to_setting
+            Pair(R.id.fragment_item_list, R.id.fragment_account) -> return R.id.action_itemList_to_account
             Pair(R.id.fragment_item_list, R.id.fragment_locked) -> return R.id.action_itemList_to_locked
             Pair(R.id.fragment_item_list, R.id.fragment_filter) -> return R.id.action_itemList_to_filter
 
