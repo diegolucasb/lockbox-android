@@ -106,9 +106,9 @@ class RoutePresenter(
     private fun showSecurityDisclaimerDialog(): Observable<AlertState> {
         return AlertDialogHelper.showAlertDialog(
             activity,
-            R.string.not_using_PIN_title,
-            R.string.not_using_PIN_message,
-            R.string.set_up_pin_button,
+            R.string.no_device_security_title,
+            R.string.no_device_security_message,
+            R.string.set_up_security_button,
             R.string.cancel
         )
     }
