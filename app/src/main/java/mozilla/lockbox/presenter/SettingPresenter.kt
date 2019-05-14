@@ -27,7 +27,6 @@ import mozilla.lockbox.adapter.TextSettingConfiguration
 import mozilla.lockbox.adapter.ToggleSettingConfiguration
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.flux.Presenter
-import mozilla.lockbox.model.FingerprintAuthCallback
 import mozilla.lockbox.store.FingerprintStore
 import mozilla.lockbox.store.SettingStore
 
@@ -44,8 +43,6 @@ class SettingPresenter(
     private val settingStore: SettingStore = SettingStore.shared,
     private val fingerprintStore: FingerprintStore = FingerprintStore.shared
 ) : Presenter() {
-
-    private val versionNumber = BuildConfig.VERSION_NAME
 
     private val autoLockTimeClickListener: Consumer<Unit>
         get() = Consumer {
@@ -94,20 +91,13 @@ class SettingPresenter(
     override fun onViewReady() {
         settingStore.onEnablingFingerprint
             .subscribe {
-                if (it is FingerprintAuthAction.OnAuthentication) {
-                    when (it.authCallback) {
-                        is FingerprintAuthCallback.OnAuth ->
-                            dispatcher.dispatch(
-                                SettingAction.UnlockWithFingerprint(true)
-                            )
-                        is FingerprintAuthCallback.OnError -> {
-                            dispatcher.dispatch(
-                                SettingAction.UnlockWithFingerprint(false)
-                            )
-                        }
-                    }
-                } else {
-                    dispatcher.dispatch(SettingAction.UnlockWithFingerprint(false))
+                when (it) {
+                    is FingerprintAuthAction.OnSuccess ->
+                        dispatcher.dispatch(SettingAction.UnlockWithFingerprint(true))
+                    is FingerprintAuthAction.OnError ->
+                        dispatcher.dispatch(SettingAction.UnlockWithFingerprint(false))
+                    is FingerprintAuthAction.OnCancel ->
+                        dispatcher.dispatch(SettingAction.UnlockWithFingerprint(false))
                 }
 
                 dispatcher.dispatch(SettingAction.UnlockWithFingerprintPendingAuth(false))
@@ -166,7 +156,9 @@ class SettingPresenter(
                 toggleObserver = sendUsageDataObserver
             ),
             AppVersionSettingConfiguration(
-                text = "App Version: $versionNumber",
+                title = R.string.app_version_title,
+                appVersion = BuildConfig.VERSION_NAME,
+                buildNumber = BuildConfig.BITRISE_BUILD_NUMBER,
                 contentDescription = R.string.app_version_description
             )
         )

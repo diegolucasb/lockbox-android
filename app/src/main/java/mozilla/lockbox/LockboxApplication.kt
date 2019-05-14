@@ -16,9 +16,11 @@ import io.sentry.Sentry
 import io.sentry.android.AndroidSentryClientFactory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import mozilla.appservices.LockboxMegazord
+import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import mozilla.components.support.base.log.Log
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.base.log.sink.AndroidLogSink
+import mozilla.components.support.rustlog.RustLog
 import mozilla.lockbox.presenter.ApplicationPresenter
 import mozilla.lockbox.store.AccountStore
 import mozilla.lockbox.support.AutoLockSupport
@@ -29,6 +31,7 @@ import mozilla.lockbox.store.FingerprintStore
 import mozilla.lockbox.store.NetworkStore
 import mozilla.lockbox.store.SettingStore
 import mozilla.lockbox.store.TelemetryStore
+import mozilla.lockbox.support.AdjustSupport
 import mozilla.lockbox.support.Constant
 import mozilla.lockbox.support.FxASyncDataStoreSupport
 import mozilla.lockbox.support.PublicSuffixSupport
@@ -37,7 +40,7 @@ import mozilla.lockbox.support.isDebug
 
 sealed class LogProvider {
     companion object {
-        val log: Logger = Logger("Lockbox")
+        val log: Logger = Logger("Lockwise")
     }
 }
 
@@ -70,10 +73,13 @@ open class LockboxApplication : Application() {
 
         val config = AdjustConfig(this, appToken, environment)
         Adjust.onCreate(config)
+        // register instance of the ActivityLifecycleCallbacks class.
+        registerActivityLifecycleCallbacks(AdjustSupport.AdjustLifecycleCallbacks())
     }
 
     private fun setupDataStoreSupport() {
-        LockboxMegazord.init()
+        LockboxMegazord.init(lazy { HttpURLConnectionClient() })
+        RustLog.enable()
 
         // This list of stores need to be constructed
         // in the given order. e.g. AccountStore dispatches DataStoreActions.
@@ -107,10 +113,9 @@ open class LockboxApplication : Application() {
     }
 
     private fun setupSentry() {
-        // Set up Sentry using DSN (client key) from the Project Settings page on Sentry
+        // Set up Sentry using DSN (client key)
         val ctx = this.applicationContext
-        // Retrieved from environment's local (or bitrise's "Secrets") environment variable
-        val sentryDsn: String? = System.getenv("SENTRY_DSN")
+        val sentryDsn = Constant.Sentry.dsn
         Sentry.init(sentryDsn, AndroidSentryClientFactory(ctx))
     }
 

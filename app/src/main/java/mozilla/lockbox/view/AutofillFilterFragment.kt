@@ -7,53 +7,66 @@
 package mozilla.lockbox.view
 
 import android.content.Context
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
+import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.jakewharton.rxbinding2.view.clicks
 import com.jakewharton.rxbinding2.view.visibility
-import com.jakewharton.rxbinding2.widget.text
 import com.jakewharton.rxbinding2.widget.textChanges
 import io.reactivex.Observable
 import io.reactivex.functions.Consumer
 import io.reactivex.subjects.PublishSubject
 import kotlinx.android.synthetic.main.fragment_autofill_filter.view.*
+import kotlinx.android.synthetic.main.fragment_autofill_filter.view.entriesView
+import kotlinx.android.synthetic.main.fragment_item_list.view.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import mozilla.lockbox.R
 import mozilla.lockbox.adapter.ItemListAdapter
 import mozilla.lockbox.adapter.ItemListAdapterType
 import mozilla.lockbox.model.ItemViewModel
 import mozilla.lockbox.presenter.AutofillFilterPresenter
-import mozilla.lockbox.presenter.AutofillFilterView
+import mozilla.lockbox.presenter.FilterView
 
 @ExperimentalCoroutinesApi
-class AutofillFilterFragment : DialogFragment(), AutofillFilterView {
+class AutofillFilterFragment : DialogFragment(), FilterView {
     val adapter = ItemListAdapter(ItemListAdapterType.AutofillFilter)
 
-    override val onDismiss: Observable<Unit> = PublishSubject.create<Unit>()
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         presenter = AutofillFilterPresenter(this)
         val view = inflater.inflate(R.layout.fragment_autofill_filter, container, false)
-
-        val layoutManager = LinearLayoutManager(context)
-        view.entriesView.layoutManager = layoutManager
-        view.entriesView.adapter = adapter
         retainInstance = true
         return view
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setStyle(androidx.fragment.app.DialogFragment.STYLE_NORMAL, R.style.NoTitleDialog)
+        setStyle(STYLE_NORMAL, R.style.NoTitleDialog)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         dialog?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        setupListView(view.entriesView)
+
         super.onViewCreated(view, savedInstanceState)
+    }
+
+    private fun setupListView(listView: RecyclerView) {
+        val context = requireContext()
+        val layoutManager = LinearLayoutManager(context)
+        val decoration = DividerItemDecoration(context, layoutManager.orientation)
+        context.getDrawable(R.drawable.inset_divider)?.let {
+            decoration.setDrawable(it)
+            listView.addItemDecoration(decoration)
+        }
+        listView.layoutManager = layoutManager
+        listView.adapter = adapter
     }
 
     override fun onResume() {
@@ -68,25 +81,28 @@ class AutofillFilterFragment : DialogFragment(), AutofillFilterView {
         get() = view!!.filterField.textChanges()
 
     override val filterText: Consumer<in CharSequence>
-        get() = view!!.filterField.text()
+        get() = Consumer { newText -> view!!.filterField.setText(newText) }
     override val cancelButtonClicks: Observable<Unit>
         get() = view!!.cancelButton.clicks()
     override val cancelButtonVisibility: Consumer<in Boolean>
         get() = view!!.cancelButton.visibility()
     override val itemSelection: Observable<ItemViewModel>
         get() = adapter.itemClicks
+    override val noMatchingClicks: Observable<Unit>? = null
+    override val displayNoEntries: ((Boolean) -> Unit)?
+        get() = adapter::displayNoEntries
+    override val onDismiss: Observable<Unit> = PublishSubject.create<Unit>()
 
     override fun updateItems(items: List<ItemViewModel>) {
         adapter.updateItems(items)
     }
 
-    override fun displayNoEntries(enabled: Boolean) {
-        adapter.displayNoEntries(enabled)
+    override fun onCancel(dialog: DialogInterface) {
+        (onDismiss as PublishSubject).onNext(Unit)
+        super.onCancel(dialog)
     }
 
     override fun onDestroyView() {
-        (onDismiss as PublishSubject).onNext(Unit)
-
         val dialog = dialog
         // handles https://code.google.com/p/android/issues/detail?id=17423
         if (dialog != null && retainInstance) {

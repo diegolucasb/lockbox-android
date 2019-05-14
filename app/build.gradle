@@ -11,7 +11,6 @@ plugins {
     id 'kotlin-android-extensions'
     id 'kotlin-android'
     id 'io.sentry.android.gradle'
-    id 'org.mozilla.appservices'
     id 'jacoco'
 }
 
@@ -22,13 +21,15 @@ android {
         minSdkVersion 24
         //noinspection OldTargetApi
         targetSdkVersion 26
-        versionCode 1
-        versionName "1.0"
+        versionCode 3487
+        versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         // The following argument makes the Android Test Orchestrator run its
         // "pm clear" command after each test invocation. This command ensures
         // that the app's state is completely cleared between tests.
         testInstrumentationRunnerArguments clearPackageData: 'true'
+
+        buildConfigField "int", "BITRISE_BUILD_NUMBER", System.getenv("BITRISE_BUILD_NUMBER") ?: "0"
     }
     buildTypes {
         debug {
@@ -36,8 +37,9 @@ android {
             testCoverageEnabled true
         }
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
@@ -45,6 +47,7 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
     lintOptions {
+        disable 'GradleDependency'
         lintConfig file("lint-config.xml")
         warningsAsErrors true
         baseline file("lint-baseline.xml")
@@ -59,6 +62,7 @@ android {
     packagingOptions {
         exclude 'META-INF/LICENSE.md'
         exclude 'META-INF/LICENSE-notice.md'
+        exclude 'META-INF/atomicfu.kotlin_module'
     }
 }
 
@@ -80,13 +84,17 @@ configurations.all { config ->
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.appcompat:appcompat:1.1.0-alpha03'
+    //noinspection GradleDependency
+    implementation 'androidx.appcompat:appcompat:1.1.0-alpha04'
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'com.google.android.material:material:1.1.0-alpha04'
+    //noinspection GradleDependency
+    implementation 'com.google.android.material:material:1.1.0-alpha05'
+    //noinspection GradleDependency
     implementation "androidx.recyclerview:recyclerview:$recyclerview_version"
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation 'androidx.exifinterface:exifinterface:1.0.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.0.0-alpha3'
+    //noinspection GradleDependency
+    implementation "androidx.constraintlayout:constraintlayout:${constraintlayout_version}"
     implementation "com.jakewharton.rxbinding2:rxbinding:${rxbinding_version}"
     implementation "com.jakewharton.rxbinding2:rxbinding-design-kotlin:${rxbinding_version}"
     implementation "com.jakewharton.rxbinding2:rxbinding-appcompat-v7-kotlin:${rxbinding_version}"
@@ -102,7 +110,10 @@ dependencies {
     implementation "org.mozilla.components:lib-dataprotect:${rootProject.ext.android_components_version}"
     implementation "org.mozilla.components:lib-fetch-httpurlconnection:${rootProject.ext.android_components_version}"
     implementation "org.mozilla.components:lib-publicsuffixlist:${rootProject.ext.android_components_version}"
-    implementation 'io.sentry:sentry-android:1.7.14'
+    implementation "org.mozilla.components:support-rustlog:${rootProject.ext.android_components_version}"
+    implementation "org.mozilla.components:concept-sync:${rootProject.ext.android_components_version}"
+
+    implementation "io.sentry:sentry-android:$sentry_version"
     implementation "com.squareup.picasso:picasso:$picasso_version"
     implementation project(":thirdparty")
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutine_version"
@@ -111,20 +122,23 @@ dependencies {
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:1.6.2'
     releaseImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.2'
     testImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.2'
-    implementation 'androidx.lifecycle:lifecycle-extensions:2.1.0-alpha03'
-    implementation 'androidx.lifecycle:lifecycle-common-java8:2.1.0-alpha03'
+    //noinspection GradleDependency
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.1.0-alpha04'
+    //noinspection GradleDependency
+    implementation 'androidx.lifecycle:lifecycle-common-java8:2.1.0-alpha04'
     implementation "android.arch.navigation:navigation-fragment:$navigation_version"
     implementation "android.arch.navigation:navigation-ui-ktx:$navigation_version"
     implementation 'com.adjust.sdk:adjust-android:4.17.0'
     implementation 'com.android.installreferrer:installreferrer:1.0'
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     testImplementation 'junit:junit:4.12'
-    testImplementation 'org.mockito:mockito-core:2.22.0'
-    testImplementation 'org.robolectric:robolectric:4.0.2'
+    testImplementation 'org.mockito:mockito-core:2.24.5'
+    testImplementation 'org.robolectric:robolectric:4.2.1'
     testImplementation "org.powermock:powermock-module-junit4:2.0.0-beta.5"
     testImplementation "org.powermock:powermock-api-mockito2:2.0.0-beta.5"
     testImplementation "org.junit.jupiter:junit-jupiter-api:5.3.1"
     androidTestImplementation "org.junit.jupiter:junit-jupiter-api:5.3.1"
-    androidTestImplementation "androidx.test:core:$androidxTest_version"
+    testImplementation "androidx.test:core:$androidxTest_version"
     androidTestImplementation "androidx.test.ext:junit:$androidxTest_version"
     androidTestImplementation "androidx.test:runner:$androidxTest_version"
     androidTestImplementation "androidx.test:rules:$androidxTest_version"
@@ -144,11 +158,16 @@ dependencies {
     ktlint "com.github.shyiko:ktlint:0.28.0"
 }
 
-appservices {
-    defaultConfig {
-        megazord = 'lockbox'
-        unitTestingEnabled = false
-    }
+sentry {
+    // Disables or enables the automatic configuration of proguard
+    // for Sentry.  This injects a default config for proguard so
+    // you don't need to do it manually.
+    autoProguardConfig false
+
+    // Enables or disables the automatic upload of mapping files
+    // during a build.  If you disable this you'll need to manually
+    // upload the mapping files with sentry-cli when you do a release.
+    autoUpload true
 }
 
 def outputDir = "${project.buildDir}/reports/ktlint/"
@@ -229,6 +248,45 @@ if (project.hasProperty("coverage")) {
             debug {
                 testCoverageEnabled true
                 applicationIdSuffix ".coverage"
+            }
+        }
+    }
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions.allWarningsAsErrors = true
+}
+
+// Internal, but stable and convenient.
+import org.gradle.api.internal.artifacts.DefaultModuleIdentifier
+
+// This is the equivalent of what the `org.mozilla.appservices` Gradle plugin
+// achieved, minus asserting that the versions of all the megazord components
+// agree.  That assertion could be added if required.
+afterEvaluate {
+    // The definitions of the megazords themselves evolve: this set was determined from
+    // https://github.com/mozilla/application-services/blob/v0.27.0/megazords/lockbox/android/build.gradle#L79-L82,
+    // where the version in the URL is the tag corresponding to `mozilla_appservices_version`.  This
+    // will need to be bumped when `android_components_version` (and thus
+    // `mozilla_appservices_version`) is rolled forward.
+    def megazord = DefaultModuleIdentifier.newId('org.mozilla.appservices', 'lockbox-megazord')
+    def megazordComponents = [
+        DefaultModuleIdentifier.newId('org.mozilla.appservices', 'fxaclient'),
+        DefaultModuleIdentifier.newId('org.mozilla.appservices', 'logins'),
+        DefaultModuleIdentifier.newId('org.mozilla.appservices', 'rustlog'),
+    ]
+
+    configurations.each { configuration ->
+        configuration.resolutionStrategy.dependencySubstitution.all { dependency ->
+            if (dependency.requested instanceof ModuleComponentSelector) {
+                def moduleIdentifier = ((ModuleComponentSelector) dependency.requested).moduleIdentifier
+                if (megazordComponents.contains(moduleIdentifier)) {
+                    def megazordVersion = rootProject.ext.mozilla_appservices_version
+                    def substitution = "${megazord.group}:${megazord.name}:${megazordVersion}"
+                    logger.lifecycle("In ${configuration}: substituting megazord module '$substitution' for component module" +
+                                     " '${moduleIdentifier.group}:${moduleIdentifier.name}:${dependency.requested.version}'")
+                    dependency.useTarget(substitution)
+                }
             }
         }
     }

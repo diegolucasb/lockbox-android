@@ -21,14 +21,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.rx2.asMaybe
 import kotlinx.coroutines.rx2.asSingle
-import mozilla.components.service.fxa.AccessTokenInfo
+import mozilla.appservices.fxaclient.FxaException
+import mozilla.components.concept.sync.AccessTokenInfo
+import mozilla.components.concept.sync.Avatar
+import mozilla.components.concept.sync.Profile
 import mozilla.components.service.fxa.Config
 import mozilla.components.service.fxa.FirefoxAccount
-import mozilla.components.service.fxa.FxaException
-import mozilla.components.service.fxa.Profile
 import mozilla.lockbox.action.AccountAction
 import mozilla.lockbox.action.DataStoreAction
-import mozilla.lockbox.action.DialogAction
 import mozilla.lockbox.action.LifecycleAction
 import mozilla.lockbox.extensions.filterByType
 import mozilla.lockbox.flux.Dispatcher
@@ -57,16 +57,24 @@ open class AccountStore(
 
     private val exceptionHandler: CoroutineExceptionHandler
         get() = CoroutineExceptionHandler { _, e ->
-                log.error(
-                    message = "Unexpected error occurred during Firefox Account authentication",
-                    throwable = e
-                )
-            }
+            log.error(
+                message = "Unexpected error occurred during Firefox Account authentication",
+                throwable = e
+            )
+        }
 
     private val coroutineContext: CoroutineContext
         get() = Dispatchers.Default + exceptionHandler
 
-    private val testProfile = Profile(uid = "test", email = "whovian@tardis.net", displayName = "Jodie Whittaker", avatar = "https://nerdist.com/wp-content/uploads/2017/11/The-Doctor-Jodie-Whittaker.jpg")
+    private val testProfile = Profile(
+        uid = "test",
+        email = "whovian@tardis.net",
+        displayName = "Jodie Whittaker",
+        avatar = Avatar(
+            url = "https://nerdist.com/wp-content/uploads/2017/11/The-Doctor-Jodie-Whittaker.jpg",
+            isDefault = true
+        )
+    )
 
     private val storedAccountJSON: String?
         get() = securePreferences.getString(Constant.Key.firefoxAccount)
@@ -101,9 +109,9 @@ open class AccountStore(
 
         // Moves credentials from the AccountStore, into the DataStore.
         syncCredentials.map {
-                it.value?.let { credentials -> DataStoreAction.UpdateCredentials(credentials) }
+            it.value?.let { credentials -> DataStoreAction.UpdateCredentials(credentials) }
                 ?: DataStoreAction.Reset
-            }
+        }
             .subscribe(dispatcher::dispatch)
             .addTo(compositeDisposable)
     }
@@ -120,7 +128,7 @@ open class AccountStore(
                 try {
                     this.fxa = FirefoxAccount.fromJSONString(accountJSON)
                 } catch (e: FxaException) {
-                    dispatcher.dispatch(DialogAction.NoNetworkDisclaimer)
+                    pushError(e)
                 }
                 generateLoginURL()
                 populateAccountInformation(false)
@@ -219,6 +227,14 @@ open class AccountStore(
     }
 
     private fun pushError(it: Throwable) {
-        dispatcher.dispatch(DialogAction.NoNetworkDisclaimer)
+        when (it) {
+            is FxaException.Unauthorized -> log.error(
+                "FxA error populating account information. Message: " + it.message,
+                it
+            )
+            is FxaException.Unspecified -> log.error("Unspecified FxA error. Message: " + it.message, it)
+            is FxaException.Network -> log.error("FxA network error. Message: " + it.message, it)
+            is FxaException.Panic -> log.error("FxA error. Message: " + it.message, it)
+        }
     }
 }

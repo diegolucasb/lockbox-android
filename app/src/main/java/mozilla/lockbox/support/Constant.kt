@@ -9,12 +9,18 @@ package mozilla.lockbox.support
 import mozilla.lockbox.action.Setting
 
 object Constant {
+    object Common {
+        const val emptyString = ""
+    }
+
     object App {
         const val keystoreLabel = "lockbox-keystore"
         const val dbFilename = "firefox-lockbox.db"
         const val testMarker = "TEST"
         const val bootIDPath = "/proc/sys/kernel/random/boot_id"
         const val appToken = "383z4i46o48w"
+
+        val delay: Long = if (isTesting()) 0 else 1
     }
 
     object FxA {
@@ -57,11 +63,22 @@ object Constant {
         const val firefoxAccount = "firefox-account"
         const val encryptionKey = "database-encryption-key"
         const val autoLockTimerDate = "auto-lock-timer-date"
-        const val bootID = "boot-id"
+        const val bootCompletedIntent = "android.intent.action.BOOT_COMPLETED"
+        const val clearClipboardIntent = "mozilla.lockbox.intent.CLEAR_CLIPBOARD"
+        const val clipboardDirtyExtra = "clipboard-dirty"
     }
 
     object FingerprintTimeout {
         const val errorTimeoutMillis: Long = 1600
         const val successDelayMillis: Long = 1300
+    }
+
+    object RequestCode {
+        const val noResult = 0
+        const val unlock = 221
+    }
+
+    object Sentry {
+        const val dsn = "https://19558af5301f43e1a95ab4b8ceae663b@sentry.prod.mozaws.net/401"
     }
 }

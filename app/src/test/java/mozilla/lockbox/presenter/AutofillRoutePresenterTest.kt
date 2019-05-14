@@ -7,11 +7,13 @@
 package mozilla.lockbox.presenter
 
 import android.app.Activity
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.service.autofill.FillResponse
 import android.view.autofill.AutofillManager
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
@@ -23,7 +25,6 @@ import io.reactivex.disposables.Disposable
 import io.reactivex.internal.schedulers.ExecutorScheduler
 import io.reactivex.observers.TestObserver
 import io.reactivex.subjects.PublishSubject
-import junit.framework.Assert.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import mozilla.appservices.logins.ServerPassword
 import mozilla.lockbox.R
@@ -42,13 +43,15 @@ import mozilla.lockbox.support.PublicSuffixSupport
 import mozilla.lockbox.view.AutofillFilterFragment
 import mozilla.lockbox.view.FingerprintAuthDialogFragment
 import org.junit.Assert
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mock
 import org.mockito.Mockito
+import org.mockito.Mockito.any
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
@@ -58,8 +61,6 @@ import org.powermock.modules.junit4.PowerMockRunner
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import org.powermock.api.mockito.PowerMockito.`when` as whenCalled
-
-fun <T> any(): T = Mockito.any<T>()
 
 @ExperimentalCoroutinesApi
 @RunWith(PowerMockRunner::class)
@@ -71,6 +72,7 @@ fun <T> any(): T = Mockito.any<T>()
     Intent::class
 )
 class AutofillRoutePresenterTest {
+
     @Mock
     val navController: NavController = mock(NavController::class.java)
 
@@ -78,7 +80,8 @@ class AutofillRoutePresenterTest {
     val navDestination: NavDestination = mock(NavDestination::class.java)
 
     @Mock
-    val fingerprintAuthDialogFragment: FingerprintAuthDialogFragment = PowerMockito.mock(FingerprintAuthDialogFragment::class.java)
+    val fingerprintAuthDialogFragment: FingerprintAuthDialogFragment =
+        PowerMockito.mock(FingerprintAuthDialogFragment::class.java)
 
     @Mock
     val autofillFilterFragment: AutofillFilterFragment = PowerMockito.mock(AutofillFilterFragment::class.java)
@@ -87,12 +90,25 @@ class AutofillRoutePresenterTest {
     val fragmentManager: FragmentManager = mock(FragmentManager::class.java)
 
     @Mock
+    val childFragmentManager: FragmentManager = mock(FragmentManager::class.java)
+
+    @Mock
+    val currentFragment: Fragment = mock(Fragment::class.java)
+
+    @Mock
+    val navHost: Fragment = mock(Fragment::class.java)
+
+    @Mock
     val activity: AppCompatActivity = mock(AppCompatActivity::class.java)
 
     @Mock
     val intent: Intent = PowerMockito.mock(Intent::class.java)
 
+    @Mock
+    val keyguardManager = Mockito.mock(KeyguardManager::class.java)
+
     val callingIntent = Intent()
+    val credentialIntent = Intent()
 
     class FakeResponseBuilder : FillResponseBuilder(ParsedStructure(packageName = "meow")) {
         @Mock
@@ -160,7 +176,6 @@ class AutofillRoutePresenterTest {
     private val autofillStore = FakeAutofillStore()
     private val pslSupport = FakePslSupport()
     private val dispatcherObserver = TestObserver.create<Action>()
-
     lateinit var subject: AutofillRoutePresenter
 
     @Before
@@ -179,6 +194,17 @@ class AutofillRoutePresenterTest {
         PowerMockito.whenNew(Intent::class.java).withNoArguments()
             .thenReturn(intent)
 
+        whenCalled(activity.getString(ArgumentMatchers.anyInt())).thenReturn("hello")
+        whenCalled(
+            keyguardManager.createConfirmDeviceCredentialIntent(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyString()
+            )
+        ).thenReturn(credentialIntent)
+        whenCalled(activity.getSystemService(Context.KEYGUARD_SERVICE)).thenReturn(keyguardManager)
+        whenCalled(childFragmentManager.fragments).thenReturn(listOf(currentFragment))
+        whenCalled(navHost.childFragmentManager).thenReturn(childFragmentManager)
+        whenCalled(fragmentManager.fragments).thenReturn(listOf(navHost))
         IntentBuilder.setSearchRequired(intent, true)
         whenCalled(activity.intent).thenReturn(callingIntent)
         whenCalled(activity.supportFragmentManager).thenReturn(fragmentManager)
@@ -202,13 +228,18 @@ class AutofillRoutePresenterTest {
     @Test
     fun `locked routes`() {
         routeStore.routeStub.onNext(RouteAction.LockScreen)
-
-        verify(navController).navigate(R.id.action_to_locked, null)
+        verify(navController).navigate(R.id.fragment_locked, null, null)
     }
 
     @Test
-    fun `item list routes navigate to search`() {
+    fun `item list routes navigate to filter backdrop`() {
         routeStore.routeStub.onNext(RouteAction.ItemList)
+        verify(navController).navigate(R.id.fragment_filter_backdrop, null, null)
+    }
+
+    @Test
+    fun `autofill search dialog route route to autofill filter fragment`() {
+        routeStore.routeStub.onNext(RouteAction.DialogFragment.AutofillSearchDialog)
 
         verify(autofillFilterFragment).show(eq(fragmentManager), anyString())
         verify(autofillFilterFragment).setupDialog(R.string.autofill, null)

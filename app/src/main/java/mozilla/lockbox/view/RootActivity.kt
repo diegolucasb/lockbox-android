@@ -11,15 +11,14 @@ import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import mozilla.lockbox.R
-import mozilla.lockbox.presenter.RoutePresenter
+import mozilla.lockbox.presenter.AppRoutePresenter
 import mozilla.lockbox.support.isDebug
 
 @ExperimentalCoroutinesApi
 class RootActivity : AppCompatActivity() {
-    private var presenter: RoutePresenter = RoutePresenter(this)
+    private var presenter: AppRoutePresenter = AppRoutePresenter(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(R.style.AppTheme)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_root)
         if (!isDebug()) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)

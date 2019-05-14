@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package mozilla.lockbox.presenter
 
 import android.hardware.fingerprint.FingerprintManager
@@ -5,12 +7,13 @@ import android.view.autofill.AutofillManager
 import io.reactivex.Observable
 import io.reactivex.observers.TestObserver
 import io.reactivex.subjects.PublishSubject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import mozilla.lockbox.action.FingerprintAuthAction
 import mozilla.lockbox.action.FingerprintSensorAction
 import mozilla.lockbox.action.SettingAction
 import mozilla.lockbox.extensions.assertLastValue
 import mozilla.lockbox.flux.Action
 import mozilla.lockbox.flux.Dispatcher
-import mozilla.lockbox.model.FingerprintAuthCallback
 import mozilla.lockbox.store.FingerprintStore
 import org.junit.Assert
 import org.junit.Before
@@ -23,6 +26,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.mockito.Mockito.`when` as whenCalled
 
+@ExperimentalCoroutinesApi
 @RunWith(RobolectricTestRunner::class)
 @Config(application = TestApplication::class)
 class FingerprintOnboardingPresenterTest {
@@ -43,8 +47,8 @@ class FingerprintOnboardingPresenterTest {
             errors = true
         }
 
-        private var authCallbackStub = PublishSubject.create<FingerprintAuthCallback>()
-        override val authCallback: Observable<FingerprintAuthCallback>
+        private var authCallbackStub = PublishSubject.create<FingerprintAuthAction>()
+        override val authCallback: Observable<FingerprintAuthAction>
             get() = authCallbackStub
 
         override val onSkipClick = PublishSubject.create<Unit>()

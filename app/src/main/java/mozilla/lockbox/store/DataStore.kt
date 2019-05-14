@@ -150,6 +150,15 @@ open class DataStore(
         val encryptionKey = support?.encryptionKey ?: return notReady()
         backend.ensureUnlocked(encryptionKey)
             .asSingle(coroutineContext)
+            .toObservable()
+            // start listening to the list when receiving the unlock completion
+            .switchMap { list }
+            // force an update
+            .doOnNext { updateList(Unit) }
+            // don't take the "locked" version of the list
+            .skip(1)
+            // once we get an "updated" list, we are done + can update the state
+            .take(1)
             .map { State.Unlocked }
             .subscribe(stateSubject::onNext, this::pushError)
             .addTo(compositeDisposable)
@@ -193,7 +202,9 @@ open class DataStore(
         this.listSubject.accept(emptyList())
     }
 
+    // Parameter x is needed to ensure that the function is indeed a Consumer so that it can be used in a suscribe-call
     // there's probably a slicker way to do this `Unit` thing...
+    @Suppress("UNUSED_PARAMETER")
     private fun updateList(x: Unit) {
         val backend = this.backend ?: return notReady()
         if (!backend.isLocked()) {

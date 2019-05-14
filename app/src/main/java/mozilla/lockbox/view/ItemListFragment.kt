@@ -76,7 +76,7 @@ class ItemListFragment : Fragment(), ItemListView {
         setupNavigationView(navController, view.navView)
         setupListView(view.entriesView)
         setupSpinner(view)
-        view.refreshContainer.setColorSchemeResources(R.color.refresh_blue)
+        view.refreshContainer.setColorSchemeResources(R.color.refresh_violet)
         super.onViewCreated(view, savedInstanceState)
     }
 
@@ -84,7 +84,6 @@ class ItemListFragment : Fragment(), ItemListView {
         val sortList = ArrayList<Setting.ItemListSort>()
         sortList.add(Setting.ItemListSort.ALPHABETICALLY)
         sortList.add(Setting.ItemListSort.RECENTLY_USED)
-
         spinner = view.sortButton
         sortItemsAdapter = SortItemAdapter(context!!, android.R.layout.simple_spinner_item, sortList)
         spinner.adapter = sortItemsAdapter
@@ -127,6 +126,7 @@ class ItemListFragment : Fragment(), ItemListView {
     private fun setupToolbar(toolbar: Toolbar, drawerLayout: DrawerLayout) {
         toolbar.navigationIcon = resources.getDrawable(R.drawable.ic_menu, null)
         toolbar.setNavigationContentDescription(R.string.menu_description)
+        toolbar.elevation = resources.getDimension(R.dimen.toolbar_elevation)
         toolbar.navigationClicks().subscribe { drawerLayout.openDrawer(GravityCompat.START) }
             .addTo(compositeDisposable)
     }
@@ -173,6 +173,8 @@ class ItemListFragment : Fragment(), ItemListView {
 
     override fun updateAccountProfile(profile: AccountViewModel) {
         val header = view!!.navView.getHeaderView(0)
+        val appName = getString(R.string.app_name)
+        header.menuHeader.profileImage.contentDescription = getString(R.string.app_logo, appName)
         header.menuHeader.displayName.text = profile.displayEmailName ?: resources.getString(R.string.firefox_account)
         header.menuHeader.accountName.text = profile.accountName ?: resources.getString(R.string.app_name)
 

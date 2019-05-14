@@ -1,6 +1,176 @@
 # Release Notes
 
+## 1.0.3 (Build 3819)
+
+_Date 2019-05-10_
+
+**Release Candidate 2**
+
+Minor update that includes more stability and crash fixes.
+
+New since last release candidate:
+
+- fix string interpolation to show product name on fingerprint dialog (#659)
+
+All changes since last version:
+
+- null fragment if fragment list unavailable (#618)
+- fix crash for null className on Android Q (#609)
+- remove deprecated calls (#591)
+- fix keystore crashes during autofill (#624)
+- fix stuck onboarding screen after autofill settings (#642)
+- string updates to prepare for localization (#617)
+- major dependency updates (#600)
+- fix for DumpNode crashes on Q (#623)
+- more reliably clear the clipboard (#644)
+- secure flag on autofill (#647)
+- refactor locked presenters (#643)
+
+## 1.0.3 (Build 3722)
+
+_Date 2019-05-03_
+
+**Release Candidate**
+
+Minor update that includes more stability and crash fixes.
+
+- null fragment if fragment list unavailable (#618)
+- fix crash for null className on Android Q (#609)
+- remove deprecated calls (#591)
+
+New since last build:
+
+- fix keystore crashes during autofill (#624)
+- fix stuck onboarding screen after autofill settings (#642)
+- string updates to prepare for localization (#617)
+- major dependency updates (#600)
+- fix for DumpNode crashes on Q (#623)
+- more reliably clear the clipboard (#644)
+- secure flag on autofill (#647)
+- refactor locked presenters (#643)
+
+## 1.0.3 (Build 3522)
+
+_Date: 2019-04-26_
+
+First Alpha build with crash fixes.
+
+- null fragment if fragment list unavailable (#618)
+- fix crash for null className on Android Q (#609)
+- remove deprecated calls (#591)
+
+## 1.0.2 (Build 3428)
+
+_Date: 2019-04-19_
+
+Second Alpha/Beta build with a fix for autofill crashes and proper version number in-app.
+
+Additional changes since 3417:
+
+- set version name (number) to 1.0.2 (#605)
+- fix for an IllegalStateException autofill crash (#548)
+
+## 1.0.2 (Build 3417)
+
+_Date: 2019-04-19_
+
+First Alpha/Beta build with dependency updates, paving way for more crash reporting and fixes coming soon.
+
+- update constraintlayout dependency (#578) 
+- fix race condition in LocketPresenterTest (#573)
+- update more dependencies (#572)
+- add Sentry to log errors and crashes (#588)
+- update UI tests (#590)
+- enable R8 and byte-level optimizations (#594)
+
+## 1.0.1 (Build 3320)
+
+_Date: 2019-04-04_
+
+Release Candidate
+
+- improve navigation and routing for stability (#499)
+- make finger print auth action flatter (#529)
+- fix font in spinner list (#540)
+- add nullsafe operations on FingerprintManager to prevent crashes (#546)
+- change network connection checks (#518)
+- fix error text alignment (#538)
+- fix mismatching monster on unlock screen (#553)
+- improve autofill behavior after backgrounding (#502)
+- add app bar shadow (#566)
+- add build number on settings screen (#552)
+- add title to sign in screen (#569)
+- autolock on device restart (#568)
+- merge route presenters (#539) 
+
+## 1.0.1 (Build 3307)
+
+_Date: 2019-04-01_
+
+Third internal test build for post-launch point release.
+
+- improve navigation and routing for stability (#499)
+- make finger print auth action flatter (#529)
+- fix font in spinner list (#540)
+- add nullsafe operations on FingerprintManager to prevent crashes (#546)
+- change network connection checks (#518)
+- fix error text alignment (#538)
+- fix mismatching monster on unlock screen (#553)
+- improve autofill behavior after backgrounding (#502)
+- add app bar shadow (#566)
+- add build number on settings screen (#552)
+- add title to sign in screen (#569)
+- autolock on device restart (#568)
+
+## 1.0.1 (Build 3264)
+
+_Date: 2019-04-01_
+
+Second internal test build for post-launch point release.
+
+- improve navigation and routing for stability (#499)
+- make finger print auth action flatter (#529)
+- fix font in spinner list (#540)
+- add nullsafe operations on FingerprintManager to prevent crashes (#546)
+- change network connection checks (#518)
+- fix error text alignment (#538)
+- fix mismatching monster on unlock screen (#553)
+- improve autofill behavior after backgrounding (#502)
+- add app bar shadow (#566)
+
+## 1.0.1 (Build 3190)
+
+_Date: 2019-03-26_
+
+First internal test build for post-launch point release.
+
+- improve navigation and routing for stability (#499)
+- make finger print auth action flatter (#529)
+
+## 1.0.0 (Build 3171)
+
+_Date: 2019-03-26_
+
+Introducing Firefox Lockwise for Android!
+
+Minor change since Build 3137:
+
+- add error handler to filtering to prevent crashes on autofill (#526)
+
+## 1.0.0 (Build 3137)
+
+_Date: 2019-03-21_
+
+Minor changes since Release Candidate:
+
+- Fix Adjust integration (#521)
+- Add more autofill telemetry actions (#522)
+- use blocking operators rather than inline checks (#506)
+- only update lock status after updating list (#505)
+
 ## 1.0.0 (Build 3024)
+
+_Date: 2019-03-14_
 
 Release Candidate
 

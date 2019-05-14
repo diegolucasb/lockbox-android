@@ -7,188 +7,104 @@
 package mozilla.lockbox.presenter
 
 import io.reactivex.Observable
-import io.reactivex.functions.Consumer
-import io.reactivex.observers.TestObserver
 import io.reactivex.subjects.PublishSubject
-import junit.framework.Assert.assertEquals
-import junit.framework.Assert.assertFalse
-import junit.framework.Assert.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import mozilla.appservices.logins.ServerPassword
-import mozilla.lockbox.TestConsumer
 import mozilla.lockbox.action.AutofillAction
-import mozilla.lockbox.extensions.toViewModel
 import mozilla.lockbox.flux.Action
-import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.model.ItemViewModel
 import mozilla.lockbox.store.DataStore
 import mozilla.lockbox.support.Optional
 import mozilla.lockbox.support.asOptional
-import org.junit.Before
+import org.junit.Assert
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 @ExperimentalCoroutinesApi
-@RunWith(RobolectricTestRunner::class)
 class AutofillFilterPresenterTest {
-    class FakeView : AutofillFilterView {
-        val onDismissStub = PublishSubject.create<Unit>()
-        val filterTextEnteredStub = PublishSubject.create<CharSequence>()
-        val filterTextSetStub = TestObserver<CharSequence>()
-        val cancelButtonStub = PublishSubject.create<Unit>()
-        val cancelButtonVisibilityStub = TestObserver<Boolean>()
-
-        val itemSelectionStub = PublishSubject.create<ItemViewModel>()
-        var updateItemsArgument: List<ItemViewModel>? = null
-        var displayNoEntriesArgument: Boolean? = null
-
-        override val onDismiss: Observable<Unit> = onDismissStub
-        override val filterTextEntered: Observable<CharSequence> = filterTextEnteredStub
-        override val filterText: Consumer<in CharSequence> = TestConsumer(filterTextSetStub)
-        override val cancelButtonClicks: Observable<Unit> = cancelButtonStub
-        override val cancelButtonVisibility: Consumer<in Boolean> = TestConsumer(cancelButtonVisibilityStub)
-        override val itemSelection: Observable<ItemViewModel> = itemSelectionStub
-
-        override fun updateItems(items: List<ItemViewModel>) {
-            updateItemsArgument = items
-        }
-
-        override fun displayNoEntries(enabled: Boolean) {
-            displayNoEntriesArgument = enabled
-        }
-    }
-
     class FakeDataStore : DataStore() {
-        val listStub = PublishSubject.create<List<ServerPassword>>()
-        override val list: Observable<List<ServerPassword>>
-            get() = listStub
-
-        var getArgument: String? = null
         val getStub = PublishSubject.create<Optional<ServerPassword>>()
+        var getArgument: String? = null
+
         override fun get(id: String): Observable<Optional<ServerPassword>> {
             getArgument = id
             return getStub
         }
     }
 
-    private val serverPassword1 = ServerPassword(
-        "oiupkjkui",
-        "www.mozilla.org",
-        username = "cats@cats.com",
-        password = "woof"
-    )
+    class ExercisingFake(
+        override val view: FilterView,
+        override val dataStore: DataStore
+    ) : AutofillFilterPresenter(view, dataStore = dataStore) {
 
-    private val serverPassword2 = ServerPassword(
-        "ljklkjldfs",
-        "www.neopets.com",
-        username = "dogs@dogs.com",
-        password = "meow"
-    )
+        fun exerciseItemSelectionActionMap(original: Observable<ItemViewModel>): Observable<Action> {
+            return original.itemSelectionActionMap()
+        }
 
-    private val items = listOf(serverPassword1, serverPassword2)
+        fun exerciseItemListMap(original: Observable<Pair<CharSequence, List<ItemViewModel>>>): Observable<List<ItemViewModel>> {
+            return original.itemListMap()
+        }
+    }
 
-    private val view = FakeView()
-    private val dispatcher = Dispatcher()
+    private val view = FilterPresenterTest.FakeFilterView()
     private val dataStore = FakeDataStore()
-    private val dispatcherObserver: TestObserver<Action> = TestObserver.create()
-
-    val subject = AutofillFilterPresenter(view, dispatcher, dataStore)
-
-    @Before
-    fun setUp() {
-        dispatcher.register.subscribe(dispatcherObserver)
-        subject.onViewReady()
-    }
+    val subject = ExercisingFake(view, dataStore)
+    private val id = "jnewkdiou"
+    private val itemViewModel = ItemViewModel("mozilla", "cats@cats.com", id)
 
     @Test
-    fun `dismiss stub cancels`() {
-        view.onDismissStub.onNext(Unit)
+    fun `item selection with null item`() {
+        val action = subject
+            .exerciseItemSelectionActionMap(
+                Observable.just(ItemViewModel("mozilla", "cats@cats.com", id))
+            )
+            .blockingIterable()
+            .iterator()
 
-        dispatcherObserver.assertValue { it is AutofillAction.Cancel }
-    }
-
-    @Test
-    fun `item list without text`() {
-        dataStore.listStub.onNext(items)
-        view.filterTextEnteredStub.onNext("")
-
-        assertFalse(view.displayNoEntriesArgument!!)
-        assertEquals(emptyList<ItemViewModel>(), view.updateItemsArgument!!)
-        view.cancelButtonVisibilityStub.assertValue(false)
-    }
-
-    @Test
-    fun `empty list`() {
-        dataStore.listStub.onNext(emptyList())
-        view.filterTextEnteredStub.onNext("")
-
-        assertTrue(view.displayNoEntriesArgument!!)
-        assertEquals(emptyList<ItemViewModel>(), view.updateItemsArgument!!)
-        view.cancelButtonVisibilityStub.assertValue(false)
-    }
-
-    @Test
-    fun `item list with text matching username`() {
-        dataStore.listStub.onNext(items)
-        view.filterTextEnteredStub.onNext("cat")
-
-        assertTrue(view.displayNoEntriesArgument!!)
-        assertEquals(listOf(serverPassword1.toViewModel()), view.updateItemsArgument)
-        view.cancelButtonVisibilityStub.assertValue(true)
-    }
-
-    @Test
-    fun `item list with text matching domain`() {
-        dataStore.listStub.onNext(items)
-        view.filterTextEnteredStub.onNext("neo")
-
-        assertTrue(view.displayNoEntriesArgument!!)
-        assertEquals(listOf(serverPassword2.toViewModel()), view.updateItemsArgument)
-        view.cancelButtonVisibilityStub.assertValue(true)
-    }
-
-    @Test
-    fun `item list with no matches`() {
-        dataStore.listStub.onNext(items)
-        view.filterTextEnteredStub.onNext("vvvvvvvvvvv")
-
-        assertTrue(view.displayNoEntriesArgument!!)
-        assertEquals(emptyList<ItemViewModel>(), view.updateItemsArgument)
-        view.cancelButtonVisibilityStub.assertValue(true)
-    }
-
-    @Test
-    fun `item selection with datastore entry`() {
-        val guid = "fdssdffdsfdssdf"
-        view.itemSelectionStub.onNext(ItemViewModel("meh", "blah", guid))
-
-        assertEquals(guid, dataStore.getArgument)
-
-        dataStore.getStub.onNext(serverPassword1.asOptional())
-
-        val autofillAction = dispatcherObserver.values().last() as AutofillAction.Complete
-
-        assertEquals(serverPassword1, autofillAction.login)
-    }
-
-    @Test
-    fun `item selection without datastore entry`() {
-        // ^ test case unlikely
-        val guid = "fdssdffdsfdssdf"
-        view.itemSelectionStub.onNext(ItemViewModel("meh", "blah", guid))
-
-        assertEquals(guid, dataStore.getArgument)
-
+        Assert.assertEquals(id, dataStore.getArgument)
         dataStore.getStub.onNext(Optional(null))
 
-        dispatcherObserver.assertValue(AutofillAction.Cancel)
+        Assert.assertEquals(AutofillAction.Cancel, action.next())
     }
 
     @Test
-    fun `cancel button clicks`() {
-        view.cancelButtonStub.onNext(Unit)
+    fun `item selection with non-null item`() {
+        val action = subject
+            .exerciseItemSelectionActionMap(
+                Observable.just(itemViewModel)
+            )
+            .blockingIterable()
+            .iterator()
 
-        view.filterTextSetStub.assertValue("")
+        Assert.assertEquals(id, dataStore.getArgument)
+        val serverPassword = ServerPassword(id, "www.mozilla.org", password = "dawgz")
+        dataStore.getStub.onNext(serverPassword.asOptional())
+
+        Assert.assertEquals(AutofillAction.Complete(serverPassword), action.next())
+    }
+
+    @Test
+    fun `item list with filtering text`() {
+        val list = listOf(itemViewModel)
+        val mappedList = subject
+            .exerciseItemListMap(
+                Observable.just(Pair("m", list))
+            )
+            .blockingIterable()
+            .iterator()
+
+        Assert.assertEquals(list, mappedList.next())
+    }
+
+    @Test
+    fun `item list without filtering text`() {
+        val list = listOf(itemViewModel)
+        val mappedList = subject
+            .exerciseItemListMap(
+                Observable.just(Pair("", list))
+            )
+            .blockingIterable()
+            .iterator()
+
+        Assert.assertEquals(emptyList<ItemViewModel>(), mappedList.next())
     }
 }

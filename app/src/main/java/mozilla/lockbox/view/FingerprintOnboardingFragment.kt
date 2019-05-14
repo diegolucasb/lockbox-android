@@ -10,15 +10,15 @@ import io.reactivex.subjects.PublishSubject
 import kotlinx.android.synthetic.main.fragment_fingerprint_onboarding.view.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import mozilla.lockbox.R
+import mozilla.lockbox.action.FingerprintAuthAction
 import mozilla.lockbox.presenter.FingerprintOnboardingPresenter
 import mozilla.lockbox.presenter.FingerprintOnboardingView
-import mozilla.lockbox.model.FingerprintAuthCallback
 import mozilla.lockbox.support.Constant
 
 @ExperimentalCoroutinesApi
 class FingerprintOnboardingFragment : Fragment(), FingerprintOnboardingView {
-    private val _authCallback = PublishSubject.create<FingerprintAuthCallback>()
-    override val authCallback: Observable<FingerprintAuthCallback> get() = _authCallback
+    private val _authCallback = PublishSubject.create<FingerprintAuthAction>()
+    override val authCallback: Observable<FingerprintAuthAction> get() = _authCallback
 
     override val onSkipClick: Observable<Unit>
         get() = view!!.skipButton.clicks()
@@ -31,7 +31,11 @@ class FingerprintOnboardingFragment : Fragment(), FingerprintOnboardingView {
         savedInstanceState: Bundle?
     ): View? {
         presenter = FingerprintOnboardingPresenter(this)
-        return inflater.inflate(R.layout.fragment_fingerprint_onboarding, container, false)
+        val view = inflater.inflate(R.layout.fragment_fingerprint_onboarding, container, false)
+        val appLabel = getString(R.string.app_label)
+        view.unlockWithFingerprintTitle.text = getString(R.string.onboarding_unlock_title, appLabel)
+        view.unlockDescription.text = getString(R.string.onboarding_unlock_description, appLabel)
+        return view
     }
 
     override fun onSucceeded() {
@@ -41,7 +45,7 @@ class FingerprintOnboardingFragment : Fragment(), FingerprintOnboardingView {
 
         view!!.sensorDescription.removeCallbacks(resetErrorTextRunnable)
         view!!.iconFingerprint.postDelayed({
-            _authCallback.onNext(FingerprintAuthCallback.OnAuth)
+            _authCallback.onNext(FingerprintAuthAction.OnSuccess)
             isEnablingDismissed = false
         }, Constant.FingerprintTimeout.successDelayMillis)
     }
@@ -53,7 +57,7 @@ class FingerprintOnboardingFragment : Fragment(), FingerprintOnboardingView {
     override fun onError(error: String?) {
         showError(error ?: getString(R.string.fingerprint_sensor_error))
         view!!.postDelayed(
-            { _authCallback.onNext(FingerprintAuthCallback.OnError) },
+            { _authCallback.onNext(FingerprintAuthAction.OnError) },
             Constant.FingerprintTimeout.errorTimeoutMillis
         )
     }

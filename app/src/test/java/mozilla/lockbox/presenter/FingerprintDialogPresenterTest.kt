@@ -3,14 +3,14 @@ package mozilla.lockbox.presenter
 import io.reactivex.Observable
 import io.reactivex.observers.TestObserver
 import io.reactivex.subjects.PublishSubject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import mozilla.lockbox.action.FingerprintAuthAction
 import mozilla.lockbox.action.FingerprintSensorAction
 import mozilla.lockbox.extensions.assertLastValue
 import mozilla.lockbox.flux.Action
 import mozilla.lockbox.flux.Dispatcher
-import mozilla.lockbox.model.FingerprintAuthCallback
 import mozilla.lockbox.store.FingerprintStore
-import mozilla.lockbox.store.FingerprintStore.AuthenticationState as AuthenticationState
+import mozilla.lockbox.store.FingerprintStore.AuthenticationState
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,6 +19,7 @@ import org.mockito.Mockito.verify
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
+@ExperimentalCoroutinesApi
 @RunWith(RobolectricTestRunner::class)
 @Config(application = TestApplication::class)
 class FingerprintDialogPresenterTest {
@@ -33,8 +34,8 @@ class FingerprintDialogPresenterTest {
         override fun onError(error: String?) {
         }
 
-        val authCallbackStub = PublishSubject.create<FingerprintAuthCallback>()
-        override val authCallback: Observable<FingerprintAuthCallback>
+        val authCallbackStub = PublishSubject.create<FingerprintAuthAction>()
+        override val authCallback: Observable<FingerprintAuthAction>
             get() = authCallbackStub
 
         override val onDismiss = PublishSubject.create<Unit>()
@@ -78,8 +79,8 @@ class FingerprintDialogPresenterTest {
 
     @Test
     fun `dispatch authentication status for routing`() {
-        view.authCallbackStub.onNext(FingerprintAuthCallback.OnAuth)
-        dispatcherObserver.assertLastValue(FingerprintAuthAction.OnAuthentication(FingerprintAuthCallback.OnAuth))
+        view.authCallbackStub.onNext(FingerprintAuthAction.OnSuccess)
+        dispatcherObserver.assertLastValue(FingerprintAuthAction.OnSuccess)
     }
 
     @Test

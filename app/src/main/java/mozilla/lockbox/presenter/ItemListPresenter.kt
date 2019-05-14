@@ -101,7 +101,7 @@ class ItemListPresenter(
             .addTo(compositeDisposable)
 
         view.itemSelection
-            .map { RouteAction.ItemDetail(it.guid) }
+            .map { RouteAction.ItemDetail(it.id) }
             .subscribe(dispatcher::dispatch)
             .addTo(compositeDisposable)
 
@@ -146,7 +146,7 @@ class ItemListPresenter(
                 AccountViewModel(
                     accountName = it.displayName,
                     displayEmailName = it.email,
-                    avatarFromURL = it.avatar
+                    avatarFromURL = it.avatar?.url
                 )
             }
             .observeOn(AndroidSchedulers.mainThread())

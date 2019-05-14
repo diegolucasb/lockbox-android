@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 @file:Suppress("DEPRECATION")
 
 package mozilla.lockbox.store
@@ -37,7 +43,7 @@ open class FingerprintStore(
     val dispatcher: Dispatcher = Dispatcher.shared
 ) : ContextStore {
     internal val compositeDisposable = CompositeDisposable()
-    open lateinit var fingerprintManager: FingerprintManager
+    open var fingerprintManager: FingerprintManager? = null
     open lateinit var keyguardManager: KeyguardManager
     private lateinit var authenticationCallback: AuthenticationCallback
 
@@ -75,7 +81,7 @@ open class FingerprintStore(
     }
 
     override fun injectContext(context: Context) {
-        fingerprintManager = context.getSystemService(Context.FINGERPRINT_SERVICE) as FingerprintManager
+        fingerprintManager = context.getSystemService(Context.FINGERPRINT_SERVICE) as? FingerprintManager
         keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
         authenticationCallback = AuthenticationCallback(context)
     }
@@ -84,7 +90,7 @@ open class FingerprintStore(
         get() = isFingerprintAuthAvailable || isKeyguardDeviceSecure
 
     open val isFingerprintAuthAvailable: Boolean
-        get() = fingerprintManager.isHardwareDetected && fingerprintManager.hasEnrolledFingerprints()
+        get() = (fingerprintManager?.isHardwareDetected ?: false) && (fingerprintManager?.hasEnrolledFingerprints() ?: false)
 
     open val isKeyguardDeviceSecure get() = keyguardManager.isDeviceSecure
 
@@ -103,7 +109,7 @@ open class FingerprintStore(
         }
         cancellationSignal = CancellationSignal()
         selfCancelled = false
-        fingerprintManager.authenticate(cryptoObject, cancellationSignal, 0, authenticationCallback, null)
+        fingerprintManager?.authenticate(cryptoObject, cancellationSignal, 0, authenticationCallback, null)
     }
 
     private fun stopListening() {

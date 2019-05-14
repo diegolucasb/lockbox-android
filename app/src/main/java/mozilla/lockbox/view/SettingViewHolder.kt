@@ -24,6 +24,8 @@ import kotlinx.android.synthetic.main.list_cell_setting_toggle.view.title
 import kotlinx.android.synthetic.main.list_cell_setting_toggle.view.toggle
 import mozilla.lockbox.R
 
+private const val emptyString = ""
+
 abstract class SettingViewHolder(override val containerView: View) :
     RecyclerView.ViewHolder(containerView),
     LayoutContainer {
@@ -68,7 +70,13 @@ class ToggleSettingViewHolder(val view: View) : SettingViewHolder(view) {
         set(@StringRes value) {
             field = value
             if (value != R.string.empty_string) {
-                view.subtitle.setText(value)
+                val string = view.context.resources.getString(value)
+                if (string.contains("%1\$s")) {
+                    val appLabel = view.context.resources.getString(R.string.app_label)
+                    view.subtitle.text = String.format(string, appLabel)
+                } else {
+                    view.subtitle.setText(value)
+                }
                 view.subtitle.visibility = View.VISIBLE
             } else {
                 view.subtitle.visibility = View.GONE
@@ -101,9 +109,13 @@ class AppVersionSettingViewHolder(val view: View) : SettingViewHolder(view) {
             view.contentDescription = view.resources.getString(value)
         }
 
-    var text: String? = null
-        set(value) {
+    var title: String = emptyString
+        private set(value) {
             field = value
             view.appVersion.text = value
         }
+
+    fun setTitle(@StringRes format: Int, version: String, buildNumber: Int = 0) {
+        title = view.resources.getString(format, version, buildNumber)
+    }
 }
