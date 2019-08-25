@@ -7,6 +7,7 @@
 package mozilla.lockbox.presenter
 
 import androidx.annotation.IdRes
+import androidx.annotation.StringRes
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.rxkotlin.Observables
@@ -49,6 +50,8 @@ interface ItemListView {
     val refreshItemList: Observable<Unit>
     val isRefreshing: Boolean
     fun stopRefreshing()
+    fun showToastNotification(@StringRes strId: Int)
+    fun showDeleteToastNotification(text: String)
 }
 
 @ExperimentalCoroutinesApi
@@ -81,6 +84,14 @@ class ItemListPresenter(
             }
             .addTo(compositeDisposable)
 
+        /* timeout to be fixed in https://github.com/mozilla-lockwise/lockwise-android/issues/791
+              dataStore.syncState
+                  .filter { it == DataStore.SyncState.TimedOut }
+                  .map { R.string.sync_timed_out }
+                  .observeOn(AndroidSchedulers.mainThread())
+                  .subscribe(view::showToastNotification)
+                  .addTo(compositeDisposable)
+        */
         Observables.combineLatest(dataStore.list, settingStore.itemListSortOrder)
             .distinctUntilChanged()
             .map { pair ->
@@ -136,8 +147,12 @@ class ItemListPresenter(
             .addTo(compositeDisposable)
 
         view.refreshItemList
-            .doOnDispose { view.stopRefreshing() }
-            .subscribe { dispatcher.dispatch(DataStoreAction.Sync) }
+            .doOnDispose {
+                view.stopRefreshing()
+            }
+            .subscribe {
+                dispatcher.dispatch(DataStoreAction.Sync)
+            }
             .addTo(compositeDisposable)
 
         accountStore.profile
@@ -155,6 +170,13 @@ class ItemListPresenter(
 
         networkStore.isConnected
             .subscribe(view::handleNetworkError)
+            .addTo(compositeDisposable)
+
+        dataStore.deletedItem
+            .subscribe {
+                val event = it.get() ?: return@subscribe
+                view.showDeleteToastNotification(event.formSubmitURL ?: event.hostname)
+            }
             .addTo(compositeDisposable)
 
         // TODO: make this more robust to retry loading the correct page again (loadUrl)

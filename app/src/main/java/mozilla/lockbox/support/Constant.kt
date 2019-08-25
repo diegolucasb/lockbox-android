@@ -11,6 +11,8 @@ import mozilla.lockbox.action.Setting
 object Constant {
     object Common {
         const val emptyString = ""
+        const val sixtySeconds: Long = 60000
+        const val twentyFourHours: Long = 60 * 60 * 24 * 1000
     }
 
     object App {
@@ -21,6 +23,7 @@ object Constant {
         const val appToken = "383z4i46o48w"
 
         val delay: Long = if (isTesting()) 0 else 1
+        val syncTimeout: Long = 20
     }
 
     object FxA {
@@ -30,7 +33,13 @@ object Constant {
         const val lockboxScope = "https://identity.mozilla.com/apps/lockbox"
         const val profileScope = "profile"
 
-        val scopes = arrayOf(profileScope, lockboxScope, oldSyncScope)
+        val scopes = setOf(profileScope, lockboxScope, oldSyncScope)
+    }
+
+    object FxAErrors {
+        const val SyncAuthInvalid = "SyncAuthInvalidException"
+        const val InvalidKey = "InvalidKeyException"
+        const val LoginsStorage = "LoginsStorageException"
     }
 
     object Faq {
@@ -63,6 +72,7 @@ object Constant {
         const val firefoxAccount = "firefox-account"
         const val encryptionKey = "database-encryption-key"
         const val autoLockTimerDate = "auto-lock-timer-date"
+        const val syncTimerDate = "sync-timer-date"
         const val bootCompletedIntent = "android.intent.action.BOOT_COMPLETED"
         const val clearClipboardIntent = "mozilla.lockbox.intent.CLEAR_CLIPBOARD"
         const val clipboardDirtyExtra = "clipboard-dirty"

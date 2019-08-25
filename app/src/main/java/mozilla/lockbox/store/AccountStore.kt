@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.WebStorage
+import android.webkit.WebView
 import io.reactivex.Observable
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.rxkotlin.addTo
@@ -25,11 +26,12 @@ import mozilla.appservices.fxaclient.FxaException
 import mozilla.components.concept.sync.AccessTokenInfo
 import mozilla.components.concept.sync.Avatar
 import mozilla.components.concept.sync.Profile
-import mozilla.components.service.fxa.Config
+import mozilla.components.service.fxa.ServerConfig
 import mozilla.components.service.fxa.FirefoxAccount
 import mozilla.lockbox.action.AccountAction
 import mozilla.lockbox.action.DataStoreAction
 import mozilla.lockbox.action.LifecycleAction
+import mozilla.lockbox.action.SentryAction
 import mozilla.lockbox.extensions.filterByType
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.log
@@ -40,6 +42,7 @@ import mozilla.lockbox.support.Constant
 import mozilla.lockbox.support.Optional
 import mozilla.lockbox.support.SecurePreferences
 import mozilla.lockbox.support.asOptional
+import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 
@@ -82,8 +85,12 @@ open class AccountStore(
     private var fxa: FirefoxAccount? = null
 
     open val loginURL: Observable<String> = ReplaySubject.createWithSize(1)
+
     private val syncCredentials: Observable<Optional<SyncCredentials>> = ReplaySubject.createWithSize(1)
     open val profile: Observable<Optional<Profile>> = ReplaySubject.createWithSize(1)
+
+    private lateinit var webView: WebView
+    private lateinit var logDirectory: File
 
     init {
         val resetObservable = lifecycleStore.lifecycleEvents
@@ -108,16 +115,19 @@ open class AccountStore(
             .addTo(compositeDisposable)
 
         // Moves credentials from the AccountStore, into the DataStore.
-        syncCredentials.map {
-            it.value?.let { credentials -> DataStoreAction.UpdateCredentials(credentials) }
-                ?: DataStoreAction.Reset
-        }
+        syncCredentials
+            .map {
+                it.value?.let { credentials -> DataStoreAction.UpdateCredentials(credentials) }
+                    ?: DataStoreAction.Reset
+            }
             .subscribe(dispatcher::dispatch)
             .addTo(compositeDisposable)
     }
 
     override fun injectContext(context: Context) {
         detectAccount()
+        webView = WebView(context)
+        logDirectory = context.getDir("webview", Context.MODE_PRIVATE)
     }
 
     private fun detectAccount() {
@@ -154,14 +164,14 @@ open class AccountStore(
         val fxa = fxa ?: return
         securePreferences.putString(Constant.Key.firefoxAccount, fxa.toJSONString())
 
-        fxa.getProfile()
-            .asSingle(coroutineContext)
+        fxa.getProfileAsync()
+            .asMaybe(coroutineContext)
             .delay(1L, TimeUnit.SECONDS)
             .map { it.asOptional() }
             .subscribe(profileSubject::onNext, this::pushError)
             .addTo(compositeDisposable)
 
-        fxa.getAccessToken(Constant.FxA.oldSyncScope)
+        fxa.getAccessTokenAsync(Constant.FxA.oldSyncScope)
             .asMaybe(coroutineContext)
             .delay(1L, TimeUnit.SECONDS)
             .map {
@@ -179,7 +189,7 @@ open class AccountStore(
 
     private fun generateNewFirefoxAccount() {
         try {
-            val config = Config.release(Constant.FxA.clientID, Constant.FxA.redirectUri)
+            val config = ServerConfig.release(Constant.FxA.clientID, Constant.FxA.redirectUri)
             fxa = FirefoxAccount(config)
             generateLoginURL()
         } catch (e: FxaException) {
@@ -192,8 +202,8 @@ open class AccountStore(
     private fun generateLoginURL() {
         val fxa = fxa ?: return
 
-        fxa.beginOAuthFlow(Constant.FxA.scopes, true)
-            .asSingle(coroutineContext)
+        fxa.beginOAuthFlowAsync(Constant.FxA.scopes, true)
+            .asMaybe(coroutineContext)
             .subscribe((this.loginURL as Subject)::onNext, this::pushError)
             .addTo(compositeDisposable)
     }
@@ -207,7 +217,7 @@ open class AccountStore(
 
         codeQP?.let { code ->
             stateQP?.let { state ->
-                fxa.completeOAuthFlow(code, state)
+                fxa.completeOAuthFlowAsync(code, state)
                     .asSingle(coroutineContext)
                     .map { true }
                     .subscribe(this::populateAccountInformation, this::pushError)
@@ -217,6 +227,8 @@ open class AccountStore(
     }
 
     private fun clear() {
+        removeDeviceFromFxA()
+
         if (Looper.myLooper() != null) {
             CookieManager.getInstance().removeAllCookies { }
             WebStorage.getInstance().deleteAllData()
@@ -224,6 +236,51 @@ open class AccountStore(
 
         this.securePreferences.remove(Constant.Key.firefoxAccount)
         this.generateNewFirefoxAccount()
+
+        webView.clearCache(true)
+        clearLogs()
+    }
+
+    private fun removeDeviceFromFxA() {
+        if (fxa != null) {
+            fxa!!.deviceConstellation()
+                .destroyCurrentDeviceAsync()
+                .asSingle(coroutineContext)
+                .subscribe()
+                .addTo(compositeDisposable)
+        } else {
+            log.info("FxA is null. No devices to disconnect.")
+        }
+    }
+
+    private fun clearLogs() {
+        clearLogFolder(logDirectory)
+        log.info("Log pruning completed.")
+    }
+
+    private fun clearLogFolder(dir: File) {
+        if (dir.isDirectory) {
+            try {
+                val leveldbDir = dir.listFiles()
+                    .filter { file ->
+                        file.name.startsWith("Local")
+                    }[0]
+                    .listFiles()
+                    .filter { file ->
+                        file.name.startsWith("leveldb")
+                    }[0]
+                    .listFiles()
+
+                for (file in leveldbDir) {
+                    val logname = file.name
+                    if (logname.endsWith(".log")) {
+                        file.delete()
+                    }
+                }
+            } catch (exception: Exception) {
+                log.error("Failed to clear the directory.", exception)
+            }
+        }
     }
 
     private fun pushError(it: Throwable) {
@@ -236,5 +293,7 @@ open class AccountStore(
             is FxaException.Network -> log.error("FxA network error. Message: " + it.message, it)
             is FxaException.Panic -> log.error("FxA error. Message: " + it.message, it)
         }
+
+        dispatcher.dispatch(SentryAction(it))
     }
 }

@@ -14,7 +14,6 @@ import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.IdRes
 import androidx.appcompat.app.AppCompatActivity
-import androidx.arch.core.util.Cancellable
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.navigation.NavController
@@ -37,6 +36,7 @@ abstract class RoutePresenter(
     private val dispatcher: Dispatcher,
     private val routeStore: RouteStore
 ) : Presenter() {
+
     lateinit var navController: NavController
 
     open val navHostFragmentManager: FragmentManager
@@ -51,23 +51,32 @@ abstract class RoutePresenter(
             return navHostFragmentManager.fragments.lastOrNull()
         }
 
-    private val backListener = OnBackPressedCallback {
-        dispatcher.dispatch(RouteAction.InternalBack)
-        false
+    class BackPressedCallback(
+        val enabled: Boolean = false,
+        val dispatcher: Dispatcher
+    ) : OnBackPressedCallback(enabled) {
+        override fun handleOnBackPressed() {
+            dispatcher.dispatch(RouteAction.InternalBack)
+        }
     }
 
-    private var backListenerCancellable: Cancellable? = null
+    private val onBackPressedDispatcher = activity.onBackPressedDispatcher
+
+    private val callback = BackPressedCallback(false, dispatcher)
+
+    override fun onViewReady() {
+        super.onViewReady()
+        onBackPressedDispatcher.addCallback(activity, callback)
+    }
 
     override fun onPause() {
         super.onPause()
-        backListenerCancellable?.cancel()
-        backListenerCancellable = null
         compositeDisposable.clear()
     }
 
     override fun onResume() {
         super.onResume()
-        backListenerCancellable = activity.onBackPressedDispatcher.addCallback(activity, backListener)
+        onBackPressedDispatcher.addCallback(activity, callback)
     }
 
     protected abstract fun route(action: RouteAction)
@@ -115,9 +124,12 @@ abstract class RoutePresenter(
     fun navigateToFragment(@IdRes destinationId: Int, args: Bundle? = null) {
         val src = navController.currentDestination ?: return
         val srcId = src.id
-        if (srcId == destinationId && args == null) {
-            // No point in navigating if nothing has changed.
-            return
+        if (srcId == destinationId) {
+            val currentScreenArgs = navHostFragmentManager.fragments.lastOrNull()?.arguments
+            if (args hasSameContentOf currentScreenArgs) {
+                // No point in navigating if nothing has changed.
+                return
+            }
         }
 
         val transition = findTransitionId(srcId, destinationId) ?: destinationId
@@ -149,8 +161,8 @@ abstract class RoutePresenter(
 
         try {
             navController.navigate(destinationId, args, navOptions)
-        } catch (e: Throwable) {
-            log.error("This appears to be a bug in navController", e)
+        } catch (e: RuntimeException) {
+            log.error(e.localizedMessage)
             navController.navigate(destinationId, args)
         }
     }
@@ -165,8 +177,22 @@ abstract class RoutePresenter(
         )
         try {
             currentFragment?.startActivityForResult(intent, action.requestCode)
-        } catch (e: Exception) {
+        } catch (e: RuntimeException) {
             log.error("Unlock fallback failed: ", e)
+        }
+    }
+
+    private infix fun Bundle?.hasSameContentOf(another: Bundle?): Boolean {
+        if (this == null) {
+            return another == null || another.isEmpty
+        }
+
+        if (size() != another?.size()) {
+            return false
+        }
+
+        return keySet().all { key ->
+            get(key) == another.get(key)
         }
     }
 }

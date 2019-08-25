@@ -17,6 +17,7 @@ import mozilla.lockbox.R
 import mozilla.lockbox.action.AppWebPageAction
 import mozilla.lockbox.action.ClipboardAction
 import mozilla.lockbox.action.DataStoreAction
+import mozilla.lockbox.action.DialogAction
 import mozilla.lockbox.action.ItemDetailAction
 import mozilla.lockbox.action.RouteAction
 import mozilla.lockbox.extensions.assertLastValue
@@ -34,10 +35,12 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.Mockito.clearInvocations
 import org.mockito.Mockito.spy
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyZeroInteractions
 import org.powermock.api.mockito.PowerMockito
 import org.robolectric.RobolectricTestRunner
@@ -47,7 +50,15 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(application = TestApplication::class)
 class ItemDetailPresenterTest {
+
     class FakeView : ItemDetailView {
+        val kebabMenuClickStub = PublishSubject.create<Unit>()
+        override val kebabMenuClicks: Observable<Unit>
+            get() = kebabMenuClickStub
+
+        val menuItemSelectionStub = PublishSubject.create<ItemDetailAction.EditItemMenu>()
+        override val menuItemSelection: Observable<ItemDetailAction.EditItemMenu>
+            get() = menuItemSelectionStub
 
         val learnMoreClickStub = PublishSubject.create<Unit>()
         override val learnMoreClicks: Observable<Unit>
@@ -78,20 +89,15 @@ class ItemDetailPresenterTest {
             this.item = item
             showPlaceholderUsernameStub = !item.hasUsername
         }
+
         override fun showToastNotification(@StringRes strId: Int) {
             toastNotificationArgument = strId
         }
     }
 
-    class FakeDataStore : DataStore() {
-        var idArg: String? = null
-        val getStub = PublishSubject.create<Optional<ServerPassword>>()
-
-        override fun get(id: String): Observable<Optional<ServerPassword>> {
-            idArg = id
-            return getStub
-        }
-    }
+    private val getStub = PublishSubject.create<Optional<ServerPassword>>()
+    @Mock
+    val dataStore = PowerMockito.mock(DataStore::class.java)!!
 
     val dispatcher = Dispatcher()
     val dispatcherObserver = TestObserver.create<Action>()!!
@@ -103,7 +109,7 @@ class ItemDetailPresenterTest {
     val networkStore = PowerMockito.mock(NetworkStore::class.java)!!
 
     private var isConnected: Observable<Boolean> = PublishSubject.create()
-    var isConnectedObserver = TestObserver.create<Boolean>()
+    var isConnectedObserver: TestObserver<Boolean> = TestObserver.create<Boolean>()
 
     @Mock
     private val connectivityManager = PowerMockito.mock(ConnectivityManager::class.java)
@@ -134,23 +140,24 @@ class ItemDetailPresenterTest {
         )
     }
 
-    lateinit var dataStore: FakeDataStore
     lateinit var subject: ItemDetailPresenter
 
     @Before
     fun setUp() {
+        PowerMockito.whenNew(DataStore::class.java).withAnyArguments().thenReturn(dataStore)
+
         dispatcher.register.subscribe(dispatcherObserver)
         Mockito.`when`(networkStore.isConnected).thenReturn(isConnected)
+        Mockito.`when`(dataStore.get(ArgumentMatchers.anyString())).thenReturn(getStub)
         networkStore.connectivityManager = connectivityManager
         view.networkAvailable.subscribe(isConnectedObserver)
     }
 
     private fun setUpTestSubject(item: Optional<ServerPassword>) {
-        dataStore = FakeDataStore()
         subject = ItemDetailPresenter(view, item.value?.id, dispatcher, networkStore, dataStore, itemDetailStore)
         subject.onViewReady()
 
-        dataStore.getStub.onNext(item)
+        getStub.onNext(item)
     }
 
     @Test
@@ -179,7 +186,7 @@ class ItemDetailPresenterTest {
             )
         )
 
-        Assert.assertEquals(fakeCredentialNoUsername.id, dataStore.idArg)
+        verify(dataStore).get(fakeCredentialNoUsername.id)
 
         val obs = view.item ?: return fail("Expected an item")
         assertEquals(fakeCredentialNoUsername.hostname, obs.hostname)
@@ -202,11 +209,11 @@ class ItemDetailPresenterTest {
 
     @Test
     fun `doesn't update UI when credential becomes null`() {
-        setUpTestSubject(Optional<ServerPassword>(null))
+        setUpTestSubject(Optional(null))
 
         clearInvocations(view)
 
-        dataStore.getStub.onNext(Optional<ServerPassword>(null))
+        getStub.onNext(Optional(null))
 
         verifyZeroInteractions(view)
     }
@@ -233,7 +240,7 @@ class ItemDetailPresenterTest {
             )
         )
 
-        Assert.assertEquals(R.string.toast_username_copied, view.toastNotificationArgument)
+        assertEquals(R.string.toast_username_copied, view.toastNotificationArgument)
     }
 
     @Test
@@ -246,7 +253,7 @@ class ItemDetailPresenterTest {
             emptyList()
         )
 
-        Assert.assertEquals(null, view.toastNotificationArgument)
+        assertEquals(null, view.toastNotificationArgument)
     }
 
     @Test
@@ -262,7 +269,7 @@ class ItemDetailPresenterTest {
             )
         )
 
-        Assert.assertEquals(R.string.toast_password_copied, view.toastNotificationArgument)
+        assertEquals(R.string.toast_password_copied, view.toastNotificationArgument)
     }
 
     @Test
@@ -286,6 +293,24 @@ class ItemDetailPresenterTest {
     }
 
     @Test
+    fun `password visibility when app is paused in background`() {
+        setUpTestSubject(fakeCredential.asOptional())
+        // set password as visible
+        view.togglePasswordClicks.onNext(Unit)
+
+        dispatcherObserver.assertValueSequence(
+            listOf(ItemDetailAction.TogglePassword(true))
+        )
+
+        Assert.assertTrue(view.isPasswordVisible)
+
+        // pause background the app
+        subject.onPause()
+
+        Assert.assertFalse(view.isPasswordVisible)
+    }
+
+    @Test
     fun `network error visibility is correctly being set`() {
         setUpTestSubject(fakeCredential.asOptional())
 
@@ -301,5 +326,14 @@ class ItemDetailPresenterTest {
 
         view.learnMoreClickStub.onNext(Unit)
         dispatcherObserver.assertLastValue(AppWebPageAction.FaqEdit)
+    }
+
+    @Test
+    fun `select delete from kebab menu`() {
+        setUpTestSubject(Optional(fakeCredential))
+
+        val menuItemSelection = ItemDetailAction.EditItemMenu.DELETE
+        view.menuItemSelectionStub.onNext(menuItemSelection)
+        dispatcherObserver.assertValue(DialogAction.DeleteConfirmationDialog(fakeCredential))
     }
 }

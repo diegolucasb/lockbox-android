@@ -7,15 +7,13 @@ import mozilla.lockbox.action.RouteAction
 import mozilla.lockbox.action.SettingIntent
 import mozilla.lockbox.flux.Action
 import mozilla.lockbox.flux.Dispatcher
+import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.mockito.Mockito
-import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @ExperimentalCoroutinesApi
-@RunWith(RobolectricTestRunner::class)
 @Config(application = TestApplication::class)
 class AutofillOnboardingPresenterTest {
 
@@ -39,14 +37,18 @@ class AutofillOnboardingPresenterTest {
 
     @Test
     fun `move to next screen when skip is tapped`() {
+        val dispatchIterator = dispatcher.register.blockingIterable().iterator()
         view.onSkipClick.onNext(Unit)
-        dispatcherObserver.assertValue(RouteAction.Onboarding.Confirmation)
+
+        Assert.assertEquals(RouteAction.Onboarding.Confirmation, dispatchIterator.next())
     }
 
     @Test
     fun `navigate to settings when gotosettings button is tapped`() {
+        val dispatchIterator = dispatcher.register.blockingIterable().iterator()
         view.onGoToSettingsClick.onNext(Unit)
-        dispatcherObserver.assertValueAt(0, RouteAction.SystemSetting(SettingIntent.Autofill))
-        dispatcherObserver.assertValueAt(1, RouteAction.Onboarding.Confirmation)
+
+        Assert.assertEquals(RouteAction.SystemSetting(SettingIntent.Autofill), dispatchIterator.next())
+        Assert.assertEquals(RouteAction.Onboarding.Confirmation, dispatchIterator.next())
     }
 }

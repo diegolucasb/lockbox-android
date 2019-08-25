@@ -4,7 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package mozilla.lockbox
+package mozilla.lockbox.uiTests
 
 import androidx.test.rule.ActivityTestRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -31,13 +31,7 @@ open class AppRoutePresenterTest {
     @Rule @JvmField
     val activityRule: ActivityTestRule<RootActivity> = ActivityTestRule(RootActivity::class.java)
 
-    @Test
-    fun testFxALogin() {
-        // There is a check that the view is correct
-        navigator.gotoFxALogin()
-    }
-
-    @Ignore
+    @Ignore("619-ui-tests-bitrise (#620)")
     @Test
     fun testFingerprintOnboarding() {
         if (FingerprintStore.shared.isFingerprintAuthAvailable) {
@@ -89,11 +83,9 @@ open class AppRoutePresenterTest {
         navigator.gotoDisconnectDisclaimer()
         navigator.back()
         navigator.checkAtAccountSetting()
-        navigator.back()
-        navigator.back()
     }
 
-    @Ignore
+    @Ignore("619-ui-tests-bitrise (#620)")
     @Test
     fun testDisconnecting() {
         navigator.gotoDisconnectDisclaimer()
@@ -115,7 +107,7 @@ open class AppRoutePresenterTest {
         navigator.checkAtItemList()
     }
 
-    @Ignore
+    @Ignore("619-ui-tests-bitrise (#620)")
     @Test
     fun testNoSecurityDialogSetupSecurity() {
 //        navigator.goToSecuritySettings()

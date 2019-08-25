@@ -1,4 +1,4 @@
-package mozilla.lockbox
+package mozilla.lockbox.uiTests
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.ActivityTestRule
@@ -7,14 +7,15 @@ import mozilla.lockbox.robots.autofillOnboardingScreen
 import mozilla.lockbox.robots.fingerprintOnboardingScreen
 import mozilla.lockbox.robots.fxaLogin
 import mozilla.lockbox.robots.onboardingConfirmationScreen
+import mozilla.lockbox.robots.disconnectDisclaimer
 import mozilla.lockbox.store.FingerprintStore
 import mozilla.lockbox.store.SettingStore
 import mozilla.lockbox.view.RootActivity
+import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.test.BeforeTest
 
 @ExperimentalCoroutinesApi
 @RunWith(AndroidJUnit4::class)
@@ -26,9 +27,19 @@ open class OnboardingTest {
     @JvmField
     val activityRule: ActivityTestRule<RootActivity> = ActivityTestRule(RootActivity::class.java)
 
-    @BeforeTest
+    @Before
     fun setUp() {
-        navigator.disconnectAccount()
+        navigator.gotoAccountSetting()
+        disconnectDisclaimer {
+            tapDisconnect()
+            acceptDisconnect()
+        }
+    }
+
+    @Test
+    fun testFxALogin() {
+        // There is a check that the view is correct
+        navigator.gotoFxALogin()
     }
 
     @Test
@@ -37,7 +48,7 @@ open class OnboardingTest {
         onboardingConfirmationScreen { clickFinish() }
     }
 
-    @Ignore
+    @Ignore("589-UItests-update (#590)")
     @Test
     fun fingerprintSkipButtonNavigatesToItemList() {
         navigator.gotoFingerprintOnboarding()
@@ -45,7 +56,7 @@ open class OnboardingTest {
         navigator.checkAtItemList()
     }
 
-    @Ignore
+    @Ignore("589-UItests-update (#590)")
     @Test
     fun fingerprintSuccessNavigatesToItemList() {
         navigator.gotoFingerprintOnboarding()
@@ -65,7 +76,7 @@ open class OnboardingTest {
         onboardingConfirmationScreen { clickFinish() }
     }
 
-    @Ignore
+    @Ignore("589-UItests-update (#590)")
     @Test
     fun autofillGoToSettingsNavigatesToSystemSettings() {
         navigator.gotoAutofillOnboarding()

@@ -9,13 +9,13 @@ package mozilla.lockbox.presenter
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
+import androidx.activity.OnBackPressedDispatcher
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.Navigation
-import io.reactivex.Observable
 import io.reactivex.Scheduler
 import io.reactivex.android.plugins.RxAndroidPlugins
 import io.reactivex.disposables.Disposable
@@ -31,6 +31,7 @@ import mozilla.lockbox.extensions.view.AlertDialogHelper
 import mozilla.lockbox.flux.Action
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.store.RouteStore
+import mozilla.lockbox.view.DialogFragment
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -77,31 +78,33 @@ class RoutePresenterTest {
     val navDestination: NavDestination = Mockito.mock(NavDestination::class.java)
 
     @Mock
-    val dialogFragment = Mockito.mock(mozilla.lockbox.view.DialogFragment::class.java)
+    val dialogFragment: DialogFragment = Mockito.mock(mozilla.lockbox.view.DialogFragment::class.java)
 
     @Mock
     val intent: Intent = PowerMockito.mock(Intent::class.java)
 
     @Mock
-    val settingIntent = Mockito.mock(SettingIntent.Security::class.java)
+    val settingIntent: SettingIntent = Mockito.mock(SettingIntent.Security::class.java)
 
     @Mock
-    val settingAction = Mockito.mock(RouteAction.SystemSetting::class.java)
+    val settingAction: RouteAction.SystemSetting = Mockito.mock(RouteAction.SystemSetting::class.java)
 
     @Mock
-    val action = Mockito.mock(Action::class.java)
+    val action: Action = Mockito.mock(Action::class.java)
 
     @Mock
-    val dialogHelper = Mockito.mock(AlertDialogHelper::class.java)
+    val dialogHelper: AlertDialogHelper = Mockito.mock(AlertDialogHelper::class.java)
 
     @Mock
-    val keyguardManager = Mockito.mock(KeyguardManager::class.java)
+    val keyguardManager: KeyguardManager = Mockito.mock(KeyguardManager::class.java)
 
-    class FakeRouteStore : RouteStore() {
-        val routeStub = PublishSubject.create<RouteAction>()
-        override val routes: Observable<RouteAction>
-            get() = routeStub
-    }
+    @Mock
+    val routeStore: RouteStore = PowerMockito.mock(RouteStore::class.java)
+
+    @Mock
+    val onBackPressedDispatcher = Mockito.mock(OnBackPressedDispatcher::class.java)
+
+    private val routeStub = PublishSubject.create<RouteAction>()
 
     private val immediate = object : Scheduler() {
         override fun scheduleDirect(
@@ -120,9 +123,8 @@ class RoutePresenterTest {
 
     private val dispatcher = Dispatcher()
     private val dispatcherObserver = TestObserver.create<Action>()
-    private val routeStore = FakeRouteStore()
-    val callingIntent = Intent()
-    val credentialIntent = Intent()
+    private val callingIntent = Intent()
+    private val credentialIntent = Intent()
 
     lateinit var subject: RoutePresenter
 
@@ -160,13 +162,16 @@ class RoutePresenterTest {
         whenCalled(activity.applicationContext).thenReturn(context)
         whenCalled(navDestination.id).thenReturn(R.id.fragment_null)
         whenCalled(navController.currentDestination).thenReturn(navDestination)
-
+        whenCalled(routeStore.routes).thenReturn(routeStub)
+        whenCalled(activity.onBackPressedDispatcher).thenReturn(onBackPressedDispatcher)
         PowerMockito.mockStatic(Navigation::class.java)
         PowerMockito.mockStatic(AlertDialogHelper::class.java)
         PowerMockito.whenNew(Intent::class.java).withNoArguments()
             .thenReturn(intent)
         PowerMockito.whenNew(AlertDialogHelper::class.java).withNoArguments()
             .thenReturn(dialogHelper)
+        PowerMockito.whenNew(RouteStore::class.java).withNoArguments()
+            .thenReturn(routeStore)
 
         whenCalled(activity.getString(anyInt())).thenReturn("hello")
 

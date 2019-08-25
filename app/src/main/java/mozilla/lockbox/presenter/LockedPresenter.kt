@@ -16,11 +16,12 @@ import mozilla.lockbox.action.DataStoreAction
 import mozilla.lockbox.action.FingerprintAuthAction
 import mozilla.lockbox.action.RouteAction
 import mozilla.lockbox.action.UnlockingAction
+import mozilla.lockbox.extensions.filterByType
+import mozilla.lockbox.flux.Action
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.flux.Presenter
 import mozilla.lockbox.store.FingerprintStore
 import mozilla.lockbox.store.LockedStore
-import mozilla.lockbox.store.SettingStore
 import mozilla.lockbox.support.Constant
 import java.util.concurrent.TimeUnit
 
@@ -33,8 +34,7 @@ abstract class LockedPresenter(
     val lockedView: LockedView,
     open val dispatcher: Dispatcher,
     open val fingerprintStore: FingerprintStore,
-    open val lockedStore: LockedStore,
-    open val settingStore: SettingStore
+    open val lockedStore: LockedStore
 ) : Presenter() {
 
     abstract fun Observable<Unit>.unlockAuthenticationObservable(): Observable<Boolean>
@@ -47,10 +47,14 @@ abstract class LockedPresenter(
             .map {
                 if (fingerprintStore.isFingerprintAuthAvailable && it) {
                     RouteAction.DialogFragment.FingerprintDialog(R.string.fingerprint_dialog_title)
-                } else {
+                } else if (fingerprintStore.isDeviceSecure) {
                     RouteAction.UnlockFallbackDialog
+                } else {
+                    // if there is no device security, unlock without any prompting
+                    unlock()
                 }
             }
+            .filterByType(Action::class.java)
             .subscribe(dispatcher::dispatch)
             .addTo(compositeDisposable)
 

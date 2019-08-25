@@ -1,4 +1,4 @@
-package mozilla.lockbox
+package mozilla.lockbox.uiTests
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
@@ -7,6 +7,7 @@ import mozilla.lockbox.autofill.AutofillNodeNavigator
 import mozilla.lockbox.autofill.ParsedStructureBuilder
 import mozilla.lockbox.autofill.ParsedStructureData
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Rule
@@ -15,10 +16,9 @@ import org.junit.runner.RunWith
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import javax.xml.parsers.DocumentBuilderFactory
-import kotlin.test.assertNotNull
 
 @RunWith(AndroidJUnit4::class)
-@Ignore
+@Ignore("619-ui-tests-bitrise (#620)")
 class AutofillTests {
 
     @get:Rule
@@ -42,11 +42,11 @@ class AutofillTests {
     @Test
     fun testRealFixtures() {
         val fixtures = listOf(
-            Fixture("app_twitter", null, "com.twitter.android"),
-            Fixture("html_twitter", "mobile.twitter.com", ""),
-            Fixture("html_facebook", "m.facebook.com", ""),
-            Fixture("html_gmail_1", "accounts.google.com", ""),
-            Fixture("html_gmail_2", "accounts.google.com", "")
+                Fixture("app_twitter", null, "com.twitter.android"),
+                Fixture("html_twitter", "mobile.twitter.com", ""),
+                Fixture("html_facebook", "m.facebook.com", ""),
+                Fixture("html_gmail_1", "accounts.google.com", ""),
+                Fixture("html_gmail_2", "accounts.google.com", "")
         )
 
         fixtures.forEach { fixture ->

@@ -12,6 +12,7 @@ import android.content.Context
 import android.content.Intent
 import android.service.autofill.FillResponse
 import android.view.autofill.AutofillManager
+import androidx.activity.OnBackPressedDispatcher
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -50,7 +51,6 @@ import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mock
-import org.mockito.Mockito
 import org.mockito.Mockito.any
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.mock
@@ -69,7 +69,9 @@ import org.powermock.api.mockito.PowerMockito.`when` as whenCalled
     Navigation::class,
     FingerprintAuthDialogFragment::class,
     AutofillFilterFragment::class,
-    Intent::class
+    Intent::class,
+    RouteStore::class,
+    DataStore::class
 )
 class AutofillRoutePresenterTest {
 
@@ -105,10 +107,19 @@ class AutofillRoutePresenterTest {
     val intent: Intent = PowerMockito.mock(Intent::class.java)
 
     @Mock
-    val keyguardManager = Mockito.mock(KeyguardManager::class.java)
+    val keyguardManager = mock(KeyguardManager::class.java)!!
 
-    val callingIntent = Intent()
-    val credentialIntent = Intent()
+    @Mock
+    val routeStore = PowerMockito.mock(RouteStore::class.java)!!
+
+    @Mock
+    val onBackPressedDispatcher: OnBackPressedDispatcher = mock(OnBackPressedDispatcher::class.java)
+
+    @Mock
+    val dataStore = PowerMockito.mock(DataStore::class.java)!!
+
+    private val callingIntent = Intent()
+    private val credentialIntent = Intent()
 
     class FakeResponseBuilder : FillResponseBuilder(ParsedStructure(packageName = "meow")) {
         @Mock
@@ -134,17 +145,8 @@ class AutofillRoutePresenterTest {
         }
     }
 
-    class FakeRouteStore : RouteStore() {
-        val routeStub = PublishSubject.create<RouteAction>()
-        override val routes: Observable<RouteAction>
-            get() = routeStub
-    }
-
-    class FakeDataStore : DataStore() {
-        val stateStub = PublishSubject.create<DataStore.State>()
-        override val state: Observable<State>
-            get() = stateStub
-    }
+    private val routeStub = PublishSubject.create<RouteAction>()
+    private val stateStub = PublishSubject.create<DataStore.State>()
 
     class FakeAutofillStore : AutofillStore() {
         val autofillActionStub = PublishSubject.create<AutofillAction>()
@@ -171,8 +173,6 @@ class AutofillRoutePresenterTest {
 
     private val dispatcher = Dispatcher()
     private val responseBuilder = FakeResponseBuilder()
-    private val routeStore = FakeRouteStore()
-    private val dataStore = FakeDataStore()
     private val autofillStore = FakeAutofillStore()
     private val pslSupport = FakePslSupport()
     private val dispatcherObserver = TestObserver.create<Action>()
@@ -187,12 +187,20 @@ class AutofillRoutePresenterTest {
         // robolectric testrunner there.
         RxAndroidPlugins.setInitMainThreadSchedulerHandler { immediate }
 
+        whenCalled(routeStore.routes).thenReturn(routeStub)
+        whenCalled(dataStore.state).thenReturn(stateStub)
+        whenCalled(dataStore.list).thenReturn(Observable.just(emptyList()))
+
         PowerMockito.whenNew(FingerprintAuthDialogFragment::class.java).withNoArguments()
             .thenReturn(fingerprintAuthDialogFragment)
         PowerMockito.whenNew(AutofillFilterFragment::class.java).withNoArguments()
             .thenReturn(autofillFilterFragment)
         PowerMockito.whenNew(Intent::class.java).withNoArguments()
             .thenReturn(intent)
+        PowerMockito.whenNew(RouteStore::class.java).withAnyArguments()
+            .thenReturn(routeStore)
+        PowerMockito.whenNew(DataStore::class.java).withAnyArguments()
+            .thenReturn(dataStore)
 
         whenCalled(activity.getString(ArgumentMatchers.anyInt())).thenReturn("hello")
         whenCalled(
@@ -212,6 +220,7 @@ class AutofillRoutePresenterTest {
         whenCalled(navController.currentDestination).thenReturn(navDestination)
         PowerMockito.mockStatic(Navigation::class.java)
         whenCalled(Navigation.findNavController(activity, R.id.autofill_fragment_nav_host)).thenReturn(navController)
+        whenCalled(activity.onBackPressedDispatcher).thenReturn(onBackPressedDispatcher)
 
         subject = AutofillRoutePresenter(
             activity,
@@ -227,19 +236,19 @@ class AutofillRoutePresenterTest {
 
     @Test
     fun `locked routes`() {
-        routeStore.routeStub.onNext(RouteAction.LockScreen)
+        routeStub.onNext(RouteAction.LockScreen)
         verify(navController).navigate(R.id.fragment_locked, null, null)
     }
 
     @Test
     fun `item list routes navigate to filter backdrop`() {
-        routeStore.routeStub.onNext(RouteAction.ItemList)
+        routeStub.onNext(RouteAction.ItemList)
         verify(navController).navigate(R.id.fragment_filter_backdrop, null, null)
     }
 
     @Test
     fun `autofill search dialog route route to autofill filter fragment`() {
-        routeStore.routeStub.onNext(RouteAction.DialogFragment.AutofillSearchDialog)
+        routeStub.onNext(RouteAction.DialogFragment.AutofillSearchDialog)
 
         verify(autofillFilterFragment).show(eq(fragmentManager), anyString())
         verify(autofillFilterFragment).setupDialog(R.string.autofill, null)
@@ -248,7 +257,7 @@ class AutofillRoutePresenterTest {
     @Test
     fun `fingerprint dialog routes navigate to fingerprint dialog`() {
         val title = R.string.fingerprint_dialog_title
-        routeStore.routeStub.onNext(RouteAction.DialogFragment.FingerprintDialog(title))
+        routeStub.onNext(RouteAction.DialogFragment.FingerprintDialog(title))
 
         verify(fingerprintAuthDialogFragment).show(eq(fragmentManager), anyString())
         verify(fingerprintAuthDialogFragment).setupDialog(title, null)
@@ -320,7 +329,7 @@ class AutofillRoutePresenterTest {
                 "dawgzone"
             )
         )
-        dataStore.stateStub.onNext(DataStore.State.Unlocked)
+        stateStub.onNext(DataStore.State.Unlocked)
         responseBuilder.asyncFilterStub.onNext(logins)
 
         val autofillCompleteAction = dispatcherObserver.values().last() as AutofillAction.CompleteMultiple
@@ -329,7 +338,7 @@ class AutofillRoutePresenterTest {
 
     @Test
     fun `when the datastore is unlocked and the filtered list has no logins`() {
-        dataStore.stateStub.onNext(DataStore.State.Unlocked)
+        stateStub.onNext(DataStore.State.Unlocked)
         responseBuilder.asyncFilterStub.onNext(emptyList())
 
         dispatcherObserver.assertLastValue(RouteAction.ItemList)

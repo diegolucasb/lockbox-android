@@ -12,13 +12,8 @@ import android.os.SystemClock
 import android.preference.PreferenceManager
 import com.jakewharton.rxrelay2.BehaviorRelay
 import com.jakewharton.rxrelay2.Relay
-import io.reactivex.Observable
-import io.reactivex.observers.TestObserver
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import mozilla.lockbox.action.DataStoreAction
 import mozilla.lockbox.action.Setting
-import mozilla.lockbox.flux.Dispatcher
-import mozilla.lockbox.model.FixedSyncCredentials
 import mozilla.lockbox.store.SettingStore
 import org.junit.Assert
 import org.junit.Before
@@ -40,14 +35,14 @@ import org.powermock.modules.junit4.PowerMockRunner
 import java.lang.Math.abs
 import org.mockito.Mockito.`when` as whenCalled
 
-class TestLockingSupport : LockingSupport {
+class TestSystemTimingSupport : SystemTimingSupport {
     override var systemTimeElapsed: Long = 0L
 }
 
 @ExperimentalCoroutinesApi
 @RunWith(PowerMockRunner::class)
-@PrepareForTest(PreferenceManager::class, SimpleFileReader::class, AutoLockSupport::class)
-class AutoLockSupportTest {
+@PrepareForTest(PreferenceManager::class, SimpleFileReader::class)
+class TimingSupportTest {
     @Mock
     val editor: SharedPreferences.Editor = Mockito.mock(SharedPreferences.Editor::class.java)
 
@@ -60,23 +55,16 @@ class AutoLockSupportTest {
     @Mock
     private val fileReader = PowerMockito.mock(SimpleFileReader::class.java)
 
-    class FakeSettingStore : SettingStore() {
-        override var autoLockTime: Observable<Setting.AutoLockTime> =
-            BehaviorRelay.createDefault(Constant.SettingDefault.autoLockTime)
-    }
+    @Mock
+    val settingStore = PowerMockito.mock(SettingStore::class.java)
 
-    private val settingStore = FakeSettingStore()
-    private val dispatcher = Dispatcher()
+    var autoLockTimeStub = BehaviorRelay.createDefault(Constant.SettingDefault.autoLockTime)
 
     private var bootID = ";kl;jjkloi;kljhafshjkadfsmn"
 
-    private val lockRequiredObserver: TestObserver<Boolean> = TestObserver.create()
+    private val lockingSupport = spy(TestSystemTimingSupport())
 
-    private val lockingSupport = spy(TestLockingSupport())
-
-    val subject = AutoLockSupport(
-        settingStore = settingStore
-    )
+    lateinit var subject: TimingSupport
 
     @Before
     fun setUp() {
@@ -90,8 +78,12 @@ class AutoLockSupportTest {
         whenCalled(fileReader.readContents(Constant.App.bootIDPath)).thenReturn(bootID)
         PowerMockito.whenNew(SimpleFileReader::class.java).withAnyArguments().thenReturn(fileReader)
 
+        whenCalled(settingStore.autoLockTime).thenReturn(autoLockTimeStub)
+        PowerMockito.whenNew(SettingStore::class.java).withAnyArguments().thenReturn(settingStore)
+
+        subject = TimingSupport(settingStore)
         subject.injectContext(context)
-        subject.lockingSupport = lockingSupport
+        subject.systemTimingSupport = lockingSupport
     }
 
     @Test
@@ -116,8 +108,24 @@ class AutoLockSupportTest {
         verify(editor).putLong(
             eq(Constant.Key.autoLockTimerDate),
             longThat { longArg ->
-                abs(SystemClock.elapsedRealtime() + defaultAutoLock.ms - longArg) < 100
+                abs(defaultAutoLock.ms - longArg) < 100
             }
+        )
+
+        verify(editor).apply()
+    }
+
+    @Test
+    fun `storenextsynctime sets the sync time with the default`() {
+        clearInvocations(preferences)
+        clearInvocations(editor)
+        subject.storeNextSyncTime()
+
+        verify(preferences).edit()
+
+        verify(editor).putLong(
+            eq(Constant.Key.syncTimerDate),
+            eq(Constant.Common.twentyFourHours)
         )
 
         verify(editor).apply()
@@ -162,18 +170,11 @@ class AutoLockSupportTest {
 
     @Test
     fun `when the saved autolocktimerdate is later than the current system time`() {
-        dispatcher.dispatch(DataStoreAction.UpdateCredentials(FixedSyncCredentials(false)))
-        mockSavedValues(lockingSupport.systemTimeElapsed + 600000)
+        val currSystemTime: Long = Constant.Common.sixtySeconds + 10000
+        mockSavedAutoLockTime(lockingSupport.systemTimeElapsed + 120000)
+        Mockito.`when`(lockingSupport.systemTimeElapsed).thenReturn(currSystemTime)
 
         Assert.assertFalse(subject.shouldLock)
-    }
-
-    @Test
-    fun `foregrounding lifecycle actions when the saved autolocktimerdate is earlier than the current system time`() {
-        dispatcher.dispatch(DataStoreAction.UpdateCredentials(FixedSyncCredentials(false)))
-        mockSavedValues(lockingSupport.systemTimeElapsed - 600000)
-
-        Assert.assertTrue(subject.shouldLock)
     }
 
     @Test
@@ -194,10 +195,44 @@ class AutoLockSupportTest {
         verify(editor).apply()
     }
 
-    private fun mockSavedValues(
-        autoLockTimerDate: Long
-    ) {
-        whenCalled(preferences.getLong(anyString(), anyLong())).thenReturn(autoLockTimerDate)
+    @Test
+    fun `when the saved synctimerdate is later than the current system time`() {
+        val currSystemTime: Long = Constant.Common.twentyFourHours + 10000
+        mockSavedSyncTime(lockingSupport.systemTimeElapsed + Constant.Common.twentyFourHours + 10000)
+        Mockito.`when`(lockingSupport.systemTimeElapsed).thenReturn(currSystemTime)
+
+        Assert.assertFalse(subject.shouldSync)
+    }
+
+    @Test
+    fun `when the saved synctimerdate is earlier than the current system time`() {
+        val currSystemTime: Long = Constant.Common.twentyFourHours + 10000
+        mockSavedSyncTime(10000)
+        Mockito.`when`(lockingSupport.systemTimeElapsed).thenReturn(currSystemTime)
+
+        Assert.assertTrue(subject.shouldSync)
+    }
+
+    @Test
+    fun `when the saved synctimerdate is later than the current system time by more than the sync interval`() {
+        val currSystemTime: Long = 100
+        mockSavedSyncTime(Constant.Common.twentyFourHours + 500000)
+        Mockito.`when`(lockingSupport.systemTimeElapsed).thenReturn(currSystemTime)
+
+        Assert.assertTrue(subject.shouldSync)
+    }
+
+    private fun mockSavedAutoLockTime(autoLockTimerDate: Long) {
+        whenCalled(preferences.getLong(eq(Constant.Key.autoLockTimerDate), anyLong())).thenReturn(autoLockTimerDate)
+
+        PowerMockito.mockStatic(PreferenceManager::class.java)
+        whenCalled(PreferenceManager.getDefaultSharedPreferences(context)).thenReturn(preferences)
+
+        subject.injectContext(context)
+    }
+
+    private fun mockSavedSyncTime(syncTimerDate: Long) {
+        whenCalled(preferences.getLong(eq(Constant.Key.syncTimerDate), anyLong())).thenReturn(syncTimerDate)
 
         PowerMockito.mockStatic(PreferenceManager::class.java)
         whenCalled(PreferenceManager.getDefaultSharedPreferences(context)).thenReturn(preferences)

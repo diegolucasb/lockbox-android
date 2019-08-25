@@ -1,4 +1,4 @@
-package mozilla.lockbox
+package mozilla.lockbox.uiTests
 
 import android.content.Intent
 import androidx.test.rule.ActivityTestRule
@@ -10,8 +10,8 @@ import mozilla.lockbox.action.RouteAction
 import mozilla.lockbox.action.Setting
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.robots.itemList
-import mozilla.lockbox.support.AutoLockSupport
-import mozilla.lockbox.support.LockingSupport
+import mozilla.lockbox.support.TimingSupport
+import mozilla.lockbox.support.SystemTimingSupport
 import mozilla.lockbox.view.RootActivity
 import org.junit.Before
 import org.junit.Ignore
@@ -19,11 +19,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-@Ignore
-class TestLockingSupport() : LockingSupport {
+@Ignore("589-UItests-update (#590)")
+class TestSystemTimingSupport() : SystemTimingSupport {
     override var systemTimeElapsed: Long = 0L
 
-    constructor(existing: LockingSupport) : this() {
+    constructor(existing: SystemTimingSupport) : this() {
         systemTimeElapsed = existing.systemTimeElapsed
     }
 
@@ -35,17 +35,17 @@ class TestLockingSupport() : LockingSupport {
 @ExperimentalCoroutinesApi
 @RunWith(AndroidJUnit4::class)
 @LargeTest
-@Ignore
+@Ignore("589-UItests-update (#590)")
 open class AutoLockTest {
     private val navigator = Navigator()
-    private val testLockingSupport = TestLockingSupport(AutoLockSupport.shared.lockingSupport)
+    private val testLockingSupport = TestSystemTimingSupport(TimingSupport.shared.systemTimingSupport)
 
     @get:Rule
     val activityRule: ActivityTestRule<RootActivity> = ActivityTestRule(RootActivity::class.java)
 
     @Before
     fun setUp() {
-        AutoLockSupport.shared.lockingSupport = testLockingSupport
+        TimingSupport.shared.systemTimingSupport = testLockingSupport
     }
 
     @Test

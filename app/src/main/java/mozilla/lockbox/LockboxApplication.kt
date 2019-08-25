@@ -7,15 +7,14 @@
 package mozilla.lockbox
 
 import android.app.Application
-import androidx.lifecycle.ProcessLifecycleOwner
 import android.os.Build
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.adjust.sdk.Adjust
 import com.adjust.sdk.AdjustConfig
 import com.squareup.leakcanary.LeakCanary
-import io.sentry.Sentry
-import io.sentry.android.AndroidSentryClientFactory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import mozilla.appservices.LockboxMegazord
+import mozilla.appservices.Megazord
+import mozilla.components.support.rusthttp.RustHttpConfig
 import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import mozilla.components.support.base.log.Log
 import mozilla.components.support.base.log.logger.Logger
@@ -23,15 +22,17 @@ import mozilla.components.support.base.log.sink.AndroidLogSink
 import mozilla.components.support.rustlog.RustLog
 import mozilla.lockbox.presenter.ApplicationPresenter
 import mozilla.lockbox.store.AccountStore
-import mozilla.lockbox.support.AutoLockSupport
 import mozilla.lockbox.store.ClipboardStore
 import mozilla.lockbox.store.ContextStore
 import mozilla.lockbox.store.DataStore
 import mozilla.lockbox.store.FingerprintStore
+import mozilla.lockbox.store.LockedStore
 import mozilla.lockbox.store.NetworkStore
+import mozilla.lockbox.store.SentryStore
 import mozilla.lockbox.store.SettingStore
 import mozilla.lockbox.store.TelemetryStore
 import mozilla.lockbox.support.AdjustSupport
+import mozilla.lockbox.support.TimingSupport
 import mozilla.lockbox.support.Constant
 import mozilla.lockbox.support.FxASyncDataStoreSupport
 import mozilla.lockbox.support.PublicSuffixSupport
@@ -60,7 +61,6 @@ open class LockboxApplication : Application() {
         setupDataStoreSupport()
         injectContext()
         setupLifecycleListener()
-        setupSentry()
 
         // Adjust Integration
         val appToken = Constant.App.appToken
@@ -78,15 +78,19 @@ open class LockboxApplication : Application() {
     }
 
     private fun setupDataStoreSupport() {
-        LockboxMegazord.init(lazy { HttpURLConnectionClient() })
+        Megazord.init()
+        RustHttpConfig.setClient(lazy { HttpURLConnectionClient() })
         RustLog.enable()
+
+        FxASyncDataStoreSupport.shared.injectContext(this)
 
         // This list of stores need to be constructed
         // in the given order. e.g. AccountStore dispatches DataStoreActions.
         val orderedStores = listOf(
             DataStore.shared,
             AccountStore.shared,
-            AutoLockSupport.shared
+            TimingSupport.shared,
+            LockedStore.shared
         )
         orderedStores.forEach {
             log.info("${it.javaClass.simpleName} initialized")
@@ -98,25 +102,18 @@ open class LockboxApplication : Application() {
             FingerprintStore.shared,
             SettingStore.shared,
             SecurePreferences.shared,
-            FxASyncDataStoreSupport.shared,
             ClipboardStore.shared,
             NetworkStore.shared,
-            AutoLockSupport.shared,
+            TimingSupport.shared,
             AccountStore.shared,
             TelemetryStore.shared,
+            SentryStore.shared,
             PublicSuffixSupport.shared
         )
 
         contextStoreList.forEach {
             it.injectContext(this)
         }
-    }
-
-    private fun setupSentry() {
-        // Set up Sentry using DSN (client key)
-        val ctx = this.applicationContext
-        val sentryDsn = Constant.Sentry.dsn
-        Sentry.init(sentryDsn, AndroidSentryClientFactory(ctx))
     }
 
     private fun setupLifecycleListener() {
