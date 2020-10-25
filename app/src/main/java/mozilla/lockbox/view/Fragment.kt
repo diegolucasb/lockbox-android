@@ -6,14 +6,16 @@
 
 package mozilla.lockbox.view
 
+import android.content.Context
 import android.os.Bundle
-import androidx.fragment.app.Fragment as AndroidFragment
-import androidx.core.view.ViewCompat
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
+import android.view.inputmethod.InputMethodManager
+import androidx.core.view.ViewCompat
 import mozilla.lockbox.R
 import mozilla.lockbox.flux.Presenter
+import androidx.fragment.app.Fragment as AndroidFragment
 
 open class Fragment : AndroidFragment() {
     lateinit var presenter: Presenter
@@ -36,6 +38,16 @@ open class Fragment : AndroidFragment() {
     override fun onPause() {
         super.onPause()
         presenter.onPause()
+    }
+
+    fun closeKeyboard(view: View?) {
+        val inputMethodManager = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        inputMethodManager.hideSoftInputFromWindow(view?.windowToken, 0)
+    }
+
+    fun openKeyboard(view: View?) {
+        val inputMethodManager = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        inputMethodManager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
     }
 
     override fun onCreateAnimation(transit: Int, enter: Boolean, nextAnim: Int): Animation? {
@@ -64,4 +76,12 @@ open class Fragment : AndroidFragment() {
             return null
         }
     }
+
+    /**
+     * Called if the back button is pressed.
+     *
+     * @return `true` if the back button event has been handled. By default, returns false, in which
+     * case Android handles the event.
+     */
+    fun onBackPressed(): Boolean = presenter.onBackPressed()
 }

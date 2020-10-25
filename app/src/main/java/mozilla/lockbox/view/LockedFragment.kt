@@ -32,6 +32,11 @@ class LockedFragment : Fragment(), LockedView {
         return inflater.inflate(R.layout.fragment_locked, container, false)
     }
 
+    override fun onPause() {
+        super.onPause()
+        closeKeyboard(view)
+    }
+
     override val unlockButtonTaps: Observable<Unit>
         get() = view!!.unlockButton.clicks()
 

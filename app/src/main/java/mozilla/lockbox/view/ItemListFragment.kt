@@ -7,15 +7,11 @@
 package mozilla.lockbox.view
 
 import android.os.Bundle
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.Spinner
-import android.widget.TextView
-import android.widget.Toast
-import androidx.annotation.StringRes
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -49,7 +45,7 @@ import mozilla.lockbox.model.AccountViewModel
 import mozilla.lockbox.model.ItemViewModel
 import mozilla.lockbox.presenter.ItemListPresenter
 import mozilla.lockbox.presenter.ItemListView
-import mozilla.lockbox.support.assertOnUiThread
+import mozilla.lockbox.support.FeatureFlags
 import mozilla.lockbox.support.showAndRemove
 
 @ExperimentalCoroutinesApi
@@ -82,6 +78,14 @@ class ItemListFragment : Fragment(), ItemListView {
         setupListView(view.entriesView)
         setupSortDropdown(view)
         view.refreshContainer.setColorSchemeResources(R.color.refresh_violet)
+
+        view.createItemButton.visibility =
+            if (FeatureFlags.CRUD_MANUAL_CREATE) {
+                View.VISIBLE
+            } else {
+                View.INVISIBLE
+            }
+
         super.onViewCreated(view, savedInstanceState)
     }
 
@@ -90,7 +94,8 @@ class ItemListFragment : Fragment(), ItemListView {
         sortList.add(Setting.ItemListSort.ALPHABETICALLY)
         sortList.add(Setting.ItemListSort.RECENTLY_USED)
         spinner = view.sortButton
-        sortItemsAdapter = SortItemAdapter(context!!, android.R.layout.simple_spinner_item, sortList)
+        sortItemsAdapter =
+            SortItemAdapter(view.context, android.R.layout.simple_spinner_item, sortList)
         spinner.adapter = sortItemsAdapter
         spinner.setPopupBackgroundResource(R.drawable.sort_menu_bg)
 
@@ -103,7 +108,12 @@ class ItemListFragment : Fragment(), ItemListView {
             override fun onNothingSelected(parent: AdapterView<*>?) {
             }
 
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+            override fun onItemSelected(
+                parent: AdapterView<*>?,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
                 if (userSelection) {
                     sortItemsAdapter.setSelection(position)
                     _sortItemSelection.onNext(sortMenuOptions[position])
@@ -170,6 +180,9 @@ class ItemListFragment : Fragment(), ItemListView {
     override val lockNowClick: Observable<Unit>
         get() = view!!.lockNow.clicks()
 
+    override val createNewEntryClick: Observable<Unit>
+        get() = view!!.createItemButton.clicks()
+
     private val sortMenuOptions: Array<Setting.ItemListSort>
         get() = Setting.ItemListSort.values()
 
@@ -178,11 +191,13 @@ class ItemListFragment : Fragment(), ItemListView {
     }
 
     override fun updateAccountProfile(profile: AccountViewModel) {
-        val header = view!!.navView.getHeaderView(0)
+        val header = view?.navView?.getHeaderView(0)
         val appName = getString(R.string.app_name)
-        header.menuHeader.profileImage.contentDescription = getString(R.string.app_logo, appName)
-        header.menuHeader.displayName.text = profile.displayEmailName ?: resources.getString(R.string.firefox_account)
-        header.menuHeader.accountName.text = profile.accountName ?: resources.getString(R.string.app_name)
+        header?.menuHeader?.profileImage?.contentDescription = getString(R.string.app_logo, appName)
+        header?.menuHeader?.displayName?.text =
+            profile.displayEmailName ?: resources.getString(R.string.firefox_account)
+        header?.menuHeader?.accountName?.text =
+            profile.accountName ?: resources.getString(R.string.app_name)
 
         var avatarUrl = profile.avatarFromURL
         if (avatarUrl.isNullOrEmpty() || avatarUrl == resources.getString(R.string.default_avatar_url)) {
@@ -193,7 +208,7 @@ class ItemListFragment : Fragment(), ItemListView {
             .load(avatarUrl)
             .placeholder(R.drawable.ic_default_avatar)
             .transform(CropCircleTransformation())
-            .into(header.menuHeader.profileImage)
+            .into(header?.menuHeader?.profileImage)
     }
 
     override fun updateItemListSort(sort: Setting.ItemListSort) {
@@ -204,13 +219,13 @@ class ItemListFragment : Fragment(), ItemListView {
 
     override fun loading(isLoading: Boolean) {
         if (isLoading) {
-            showAndRemove(view!!.loadingView, view!!.refreshContainer)
+            showAndRemove(view!!.loadingView, view?.refreshContainer)
         } else {
-            showAndRemove(view!!.refreshContainer, view!!.loadingView)
+            showAndRemove(view!!.refreshContainer, view?.loadingView)
         }
-        view!!.filterButton.isClickable = !isLoading
-        view!!.filterButton.isEnabled = !isLoading
-        view!!.sortButton.isClickable = !isLoading
+        view?.filterButton?.isClickable = !isLoading
+        view?.filterButton?.isEnabled = !isLoading
+        view?.sortButton?.isClickable = !isLoading
     }
 
     override val refreshItemList: Observable<Unit> get() = view!!.refreshContainer.refreshes()
@@ -218,40 +233,18 @@ class ItemListFragment : Fragment(), ItemListView {
     override val isRefreshing: Boolean get() = view!!.refreshContainer.isRefreshing
 
     override fun stopRefreshing() {
-        view!!.refreshContainer.isRefreshing = false
+        view?.refreshContainer?.isRefreshing = false
     }
 
     override fun handleNetworkError(networkErrorVisibility: Boolean) {
         if (!networkErrorVisibility) {
-            errorHelper.showNetworkError(view!!)
+            errorHelper.showNetworkError(view)
         } else {
-            errorHelper.hideNetworkError(parent = view!!, child = view!!.refreshContainer.entriesView)
+            errorHelper.hideNetworkError(
+                parent = view,
+                child = view?.refreshContainer?.entriesView
+            )
         }
-    }
-
-    override fun showToastNotification(@StringRes strId: Int) {
-        assertOnUiThread()
-        val toast = setUpToast(strId = strId)
-        toast.show()
-    }
-
-    override fun showDeleteToastNotification(text: String) {
-        assertOnUiThread()
-        val toast = setUpToast(text = text)
-        toast.show()
-    }
-
-    private fun setUpToast(@StringRes strId: Int? = null, text: String? = null): Toast {
-        val toast = Toast(activity)
-
-        toast.duration = Toast.LENGTH_SHORT
-        toast.view = layoutInflater.inflate(R.layout.toast_view, this.view as ViewGroup, false)
-        toast.setGravity(Gravity.FILL_HORIZONTAL or Gravity.BOTTOM, 0, 0)
-
-        val view = toast.view.findViewById(R.id.message) as TextView
-        view.text = text?.plus(" deleted.") ?: resources.getString(strId!!)
-
-        return toast
     }
 
 //    override val retryNetworkConnectionClicks: Observable<Unit>

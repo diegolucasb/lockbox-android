@@ -6,12 +6,10 @@
 
 package mozilla.lockbox.view
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.InputMethodManager
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.jakewharton.rxbinding2.view.clicks
@@ -31,7 +29,9 @@ import mozilla.lockbox.presenter.FilterView
 
 @ExperimentalCoroutinesApi
 class FilterFragment : BackableFragment(), FilterView {
+
     val adapter = ItemListAdapter(ItemListAdapterType.Filter)
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -50,36 +50,35 @@ class FilterFragment : BackableFragment(), FilterView {
 
         return view
     }
+
     override fun onResume() {
         super.onResume()
         view!!.filterField.requestFocus()
-
-        val inputMethodManager = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        inputMethodManager.showSoftInput(view!!.filterField, InputMethodManager.SHOW_IMPLICIT)
+        openKeyboard(view?.filterField)
     }
 
     override fun onPause() {
-        val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        if (imm.isAcceptingText) {
-            imm.hideSoftInputFromWindow(view!!.filterField.windowToken, 0)
-        }
-
         super.onPause()
+        closeKeyboard(view?.filterField)
     }
 
     override val filterTextEntered: Observable<CharSequence>
         get() = view!!.filterField.textChanges()
+
     override val filterText: Consumer<in CharSequence>
         get() = Consumer { newText -> view!!.filterField.setText(newText) }
+
     override val cancelButtonClicks: Observable<Unit>
         get() = view!!.cancelButton.clicks()
+
     override val cancelButtonVisibility: Consumer<in Boolean>
         get() = view!!.cancelButton.visibility()
+
     override val itemSelection: Observable<ItemViewModel>
         get() = adapter.itemClicks
-    override val noMatchingClicks: Observable<Unit>
-        get() = adapter.noMatchingEntriesClicks
+
     override val onDismiss: Observable<Unit>? = null
+
     override val displayNoEntries: ((Boolean) -> Unit)? = null
 
     override fun updateItems(items: List<ItemViewModel>) {

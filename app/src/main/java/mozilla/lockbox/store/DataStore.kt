@@ -23,24 +23,21 @@ import mozilla.components.service.sync.logins.AsyncLoginsStorage
 import mozilla.lockbox.action.DataStoreAction
 import mozilla.lockbox.action.LifecycleAction
 import mozilla.lockbox.action.SentryAction
+import mozilla.lockbox.extensions.filter
 import mozilla.lockbox.extensions.filterByType
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.log
 import mozilla.lockbox.model.SyncCredentials
-import mozilla.lockbox.support.Constant
-import mozilla.lockbox.support.Consumable
 import mozilla.lockbox.support.DataStoreSupport
 import mozilla.lockbox.support.FxASyncDataStoreSupport
 import mozilla.lockbox.support.Optional
 import mozilla.lockbox.support.TimingSupport
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 import kotlin.coroutines.CoroutineContext
 
 @ExperimentalCoroutinesApi
 open class DataStore(
-    val dispatcher: Dispatcher = Dispatcher.shared,
-    var support: DataStoreSupport = FxASyncDataStoreSupport.shared,
+    open val dispatcher: Dispatcher = Dispatcher.shared,
+    open var support: DataStoreSupport = FxASyncDataStoreSupport.shared,
     private val timingSupport: TimingSupport = TimingSupport.shared,
     private val lifecycleStore: LifecycleStore = LifecycleStore.shared
 ) {
@@ -60,16 +57,17 @@ open class DataStore(
     }
 
     internal val compositeDisposable = CompositeDisposable()
+
     private val stateSubject = ReplayRelay.createWithSize<State>(1)
     @VisibleForTesting
-    val syncStateSubject: BehaviorRelay<SyncState> = BehaviorRelay.createDefault(SyncState.NotSyncing)
-    private val listSubject: BehaviorRelay<List<ServerPassword>> = BehaviorRelay.createDefault(emptyList())
-    private val deletedItemSubject = ReplayRelay.create<Consumable<ServerPassword>>()
+    val syncStateSubject: BehaviorRelay<SyncState> =
+        BehaviorRelay.createDefault(SyncState.NotSyncing)
+    private val listSubject: BehaviorRelay<List<ServerPassword>> =
+        BehaviorRelay.createDefault(emptyList())
 
     open val state: Observable<State> = stateSubject
     open val syncState: Observable<SyncState> = syncStateSubject
     open val list: Observable<List<ServerPassword>> get() = listSubject
-    open val deletedItem: Observable<Consumable<ServerPassword>> get() = deletedItemSubject
 
     private val exceptionHandler: CoroutineExceptionHandler
         get() = CoroutineExceptionHandler { _, e ->
@@ -93,7 +91,7 @@ open class DataStore(
         stateSubject
             .subscribe { state ->
                 when (state) {
-                    is State.Locked -> clearList()
+                    is State.Locked -> clearItemList()
                     is State.Unlocked -> syncIfRequired()
                     else -> Unit
                 }
@@ -109,9 +107,13 @@ open class DataStore(
                     is DataStoreAction.Unlock -> unlock()
                     is DataStoreAction.Sync -> sync()
                     is DataStoreAction.Touch -> touch(action.id)
+                    is DataStoreAction.AutofillTouch -> autofillTouch(action.id)
                     is DataStoreAction.Reset -> reset()
-                    is DataStoreAction.UpdateCredentials -> updateCredentials(action.syncCredentials)
-                    is DataStoreAction.Delete -> deleteCredentials(action.item)
+                    is DataStoreAction.UpdateSyncCredentials -> updateSyncCredentials(action.syncCredentials)
+                    is DataStoreAction.Delete -> delete(action.item)
+                    is DataStoreAction.UpdateItemDetail -> updateItem(action.previous, action.next)
+                    is DataStoreAction.AutofillCapture -> autofillAdd(action.item)
+                    is DataStoreAction.CreateItem -> add(action.item)
                 }
             }
             .addTo(compositeDisposable)
@@ -124,25 +126,48 @@ open class DataStore(
         setupAutoLock()
     }
 
-    private fun deleteCredentials(item: ServerPassword?) {
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    fun delete(item: ServerPassword) {
         try {
-            if (item != null) {
-                backend.delete(item.id)
-                    .asSingle(coroutineContext)
-                    .subscribe()
-                    .addTo(compositeDisposable)
-                sync()
-                deletedItemSubject.accept(Consumable(item))
-            }
+            backend.delete(item.id)
+                .asSingle(coroutineContext)
+                .subscribe { _ ->
+                    dispatcher.dispatch(DataStoreAction.Sync)
+                }
+                .addTo(compositeDisposable)
         } catch (loginsStorageException: LoginsStorageException) {
-            log.error("Exception: ", loginsStorageException)
+            pushError(loginsStorageException)
         }
     }
 
-    private fun editEntry() {
-        // TODO
-//        dispatcher.dispatch(RouteAction.ItemList)
+    private fun updateItem(previous: ServerPassword, next: ServerPassword) {
+        try {
+            val updatedCredentials = fixupMutationMetadata(previous, next)
+            backend.update(updatedCredentials)
+                .asSingle(coroutineContext)
+                .subscribe({
+                    this.updateItemList(it)
+                    dispatcher.dispatch(DataStoreAction.Sync)
+                }, {
+                    this.pushError(it)
+                })
+                .addTo(compositeDisposable)
+        } catch (loginsStorageException: LoginsStorageException) {
+            pushError(loginsStorageException)
+        }
     }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    fun fixupMutationMetadata(
+        previous: ServerPassword,
+        next: ServerPassword
+    ) = when {
+            // if the only thing changed is the password, then update the time we've updated
+            // the password.
+            previous.password != next.password && previous.copy(password = next.password) == next ->
+                next.copy(timePasswordChanged = timingSupport.currentTimeMillis)
+            else -> null
+        } ?: next
 
     private fun shutdown() {
         // rather than calling `close`, which will make the `AsyncLoginsStorage` instance unusable,
@@ -175,13 +200,86 @@ open class DataStore(
         }
     }
 
+    // Returns a list of credentials that match the arguments given.
+    open fun filteredList(
+        username: String? = null,
+        password: String? = null,
+        hostname: String? = null,
+        httpRealm: String? = null,
+        formSubmitURL: String? = null
+    ): Observable<List<ServerPassword>> = list.map {
+            it.filter(
+                username = username,
+                password = password,
+                hostname = hostname,
+                httpRealm = httpRealm,
+                formSubmitURL = formSubmitURL
+            )
+        }
+
+    // Note: in order to add, we need a ServerPassword with exactly one of formSubmitURL and httpRealm
+    @VisibleForTesting(
+        otherwise = VisibleForTesting.PRIVATE
+    )
+    fun add(item: ServerPassword) {
+        if (!backend.isLocked()) {
+            backendAdd(item)
+                .map { Unit }
+                .subscribe(this::updateItemList, this::pushError)
+                .addTo(compositeDisposable)
+        }
+    }
+
+    private fun autofillAdd(item: ServerPassword) {
+        val initiallyLocked = backend.isLocked()
+        val addItem = if (initiallyLocked) {
+            backendEnsureUnlocked()
+                .switchMap { backendAdd(item) }
+                .switchMap { backendEnsureLocked() }
+                .subscribe()
+        } else {
+            backendAdd(item)
+                .map { Unit }
+                .subscribe(this::updateItemList, this::pushError)
+        }
+
+        addItem.addTo(compositeDisposable)
+    }
+
+    private fun backendEnsureLocked() =
+        backend.ensureLocked().asSingle(coroutineContext).toObservable()
+
+    private fun backendEnsureUnlocked() =
+        backend.ensureUnlocked(support.encryptionKey).asSingle(coroutineContext).toObservable()
+
+    private fun backendAdd(item: ServerPassword) =
+        backend.add(item).asSingle(coroutineContext).toObservable()
+
+    private fun backendTouch(id: String) =
+        backend.touch(id).asSingle(coroutineContext).toObservable()
+
     private fun touch(id: String) {
         if (!backend.isLocked()) {
             backend.touch(id)
                 .asSingle(coroutineContext)
-                .subscribe(this::updateList, this::pushError)
+                .subscribe(this::updateItemList, this::pushError)
                 .addTo(compositeDisposable)
         }
+    }
+
+    private fun autofillTouch(id: String) {
+        val touchItem = if (backend.isLocked()) {
+            backendEnsureUnlocked()
+                .switchMap { backendTouch(id) }
+                .switchMap { backendEnsureLocked() }
+                .subscribe()
+        } else {
+            backendTouch(id)
+                .map { Unit }
+                .subscribe(this::updateItemList, this::pushError)
+        }
+
+        touchItem.addTo(compositeDisposable)
     }
 
     private fun unlock() {
@@ -192,14 +290,11 @@ open class DataStore(
     }
 
     private fun unlockInternal() {
-        val encryptionKey = support.encryptionKey
-        backend.ensureUnlocked(encryptionKey)
-            .asSingle(coroutineContext)
-            .toObservable()
+        backendEnsureUnlocked()
             // start listening to the list when receiving the unlock completion
             .switchMap { list }
             // force an update
-            .doOnNext { updateList(Unit) }
+            .doOnNext { updateItemList(Unit) }
             // don't take the "locked" version of the list
             .skip(1)
             // once we get an "updated" list, we are done + can update the state
@@ -215,8 +310,7 @@ open class DataStore(
     }
 
     private fun lockInternal() {
-        backend.ensureLocked()
-            .asSingle(coroutineContext)
+        backendEnsureLocked()
             .map { State.Locked }
             .subscribe(stateSubject::accept, this::pushError)
             .addTo(compositeDisposable)
@@ -230,9 +324,12 @@ open class DataStore(
         }
     }
 
-    private fun syncIfRequired() {
+    @VisibleForTesting(
+        otherwise = VisibleForTesting.PRIVATE
+    )
+    fun syncIfRequired() {
         if (timingSupport.shouldSync) {
-            this.sync()
+            dispatcher.dispatch(DataStoreAction.Sync)
             timingSupport.storeNextSyncTime()
         }
     }
@@ -256,34 +353,28 @@ open class DataStore(
             .map {
                 log.debug("Hashed UID: $it")
             }
-            .timeout(Constant.App.syncTimeout, TimeUnit.SECONDS)
-            .doOnEvent { _, err ->
-                (err as? TimeoutException).let {
-                    // syncStateSubject.accept(SyncState.TimedOut)
-                    dispatcher.dispatch(DataStoreAction.SyncTimeout(it?.message ?: ""))
-                }.run {
-                    syncStateSubject.accept(SyncState.NotSyncing)
-                }
+            .doOnEvent { _, _ ->
+                syncStateSubject.accept(SyncState.NotSyncing)
             }
             .subscribe({
-                this.updateList(it)
+                this.updateItemList(it)
                 dispatcher.dispatch(DataStoreAction.SyncSuccess)
             }, {
                 this.pushError(it)
-                dispatcher.dispatch(DataStoreAction.SyncError(it.message ?: ""))
+                dispatcher.dispatch(DataStoreAction.SyncError(it.message.orEmpty()))
             })
             .addTo(compositeDisposable)
     }
 
     // item list management
-    private fun clearList() {
+    private fun clearItemList() {
         this.listSubject.accept(emptyList())
     }
 
     // Parameter x is needed to ensure that the function is indeed a Consumer so that it can be used in a subscribe-call
     // there's probably a slicker way to do this `Unit` thing...
     @Suppress("UNUSED_PARAMETER")
-    private fun updateList(x: Unit) {
+    private fun updateItemList(x: Unit) {
         if (!backend.isLocked()) {
             backend.list()
                 .asSingle(coroutineContext)
@@ -306,7 +397,7 @@ open class DataStore(
             }
             State.Unprepared -> return
             else -> {
-                clearList()
+                clearItemList()
                 backend.wipeLocal()
                     .asSingle(coroutineContext)
                     .map { State.Unprepared }
@@ -316,7 +407,7 @@ open class DataStore(
         }
     }
 
-    private fun updateCredentials(credentials: SyncCredentials) {
+    private fun updateSyncCredentials(credentials: SyncCredentials) {
         if (!credentials.isValid) {
             return
         }

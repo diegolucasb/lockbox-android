@@ -11,30 +11,39 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.Gravity
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.IdRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.navigation.NavController
-import io.reactivex.rxkotlin.addTo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import mozilla.lockbox.BuildConfig
 import mozilla.lockbox.R
 import mozilla.lockbox.action.DialogAction
 import mozilla.lockbox.action.RouteAction
-import mozilla.lockbox.extensions.view.AlertDialogHelper
-import mozilla.lockbox.extensions.view.AlertState
+import mozilla.lockbox.action.ToastNotificationAction
 import mozilla.lockbox.flux.Dispatcher
 import mozilla.lockbox.flux.Presenter
 import mozilla.lockbox.log
+import mozilla.lockbox.store.AlertDialogStore
 import mozilla.lockbox.store.RouteStore
+import mozilla.lockbox.support.assertOnUiThread
 import mozilla.lockbox.view.DialogFragment
+import mozilla.lockbox.view.Fragment as SpecializedFragment
 
 @ExperimentalCoroutinesApi
 abstract class RoutePresenter(
     private val activity: AppCompatActivity,
     private val dispatcher: Dispatcher,
-    private val routeStore: RouteStore
+    private val routeStore: RouteStore,
+    internal val alertDialogStore: AlertDialogStore = AlertDialogStore.shared
 ) : Presenter() {
 
     lateinit var navController: NavController
@@ -58,6 +67,12 @@ abstract class RoutePresenter(
         override fun handleOnBackPressed() {
             dispatcher.dispatch(RouteAction.InternalBack)
         }
+    }
+
+    override fun onBackPressed(): Boolean {
+        dispatcher.dispatch(RouteAction.InternalBack)
+        val fragment = currentFragment as? SpecializedFragment
+        return fragment?.onBackPressed() ?: false
     }
 
     private val onBackPressedDispatcher = activity.onBackPressedDispatcher
@@ -84,23 +99,13 @@ abstract class RoutePresenter(
     protected abstract fun findTransitionId(@IdRes src: Int, @IdRes dest: Int): Int?
 
     fun showDialog(destination: DialogAction) {
-        AlertDialogHelper.showAlertDialog(activity, destination.viewModel)
-            .map { alertState ->
-                when (alertState) {
-                    AlertState.BUTTON_POSITIVE -> {
-                        destination.positiveButtonActionList
-                    }
-                    AlertState.BUTTON_NEGATIVE -> {
-                        destination.negativeButtonActionList
-                    }
-                }
-            }
-            .flatMapIterable { listOf(RouteAction.InternalBack) + it }
-            .subscribe(dispatcher::dispatch)
-            .addTo(compositeDisposable)
+        alertDialogStore.showDialog(activity, destination)
     }
 
-    open fun showDialogFragment(dialogFragment: DialogFragment, destination: RouteAction.DialogFragment) {
+    open fun showDialogFragment(
+        dialogFragment: DialogFragment,
+        destination: RouteAction.DialogFragment
+    ) {
         try {
             dialogFragment.setTargetFragment(currentFragment, 0)
             dialogFragment.show(navHostFragmentManager, dialogFragment.javaClass.name)
@@ -108,6 +113,41 @@ abstract class RoutePresenter(
         } catch (e: IllegalStateException) {
             log.error("Could not show dialog", e)
         }
+    }
+
+    fun showToastNotification(action: ToastNotificationAction) {
+        assertOnUiThread()
+
+        val toast = Toast(activity)
+        toast.duration = Toast.LENGTH_SHORT
+        val container = activity.window.decorView.rootView as ViewGroup
+
+        val layoutInflater = LayoutInflater.from(activity)
+
+        toast.view = layoutInflater.inflate(R.layout.toast_view, container, false)
+
+        val bottomMargin =
+            if (navController.currentDestination?.id == R.id.fragment_item_list) {
+                R.dimen.toast_bottom_margin_large
+            } else {
+                R.dimen.toast_bottom_margin_small
+            }
+
+        toast.setGravity(
+            Gravity.FILL_HORIZONTAL or Gravity.BOTTOM,
+            0,
+            activity.resources.getDimension(bottomMargin).toInt()
+        )
+
+        val view = toast.view.findViewById(R.id.message) as TextView
+        val message = action.viewModel.message
+        view.text = action.viewModel.messageParam?.let { activity.getString(message, it) }
+            ?: activity.getString(message)
+
+        val icon = toast.view.findViewById(R.id.icon) as ImageView
+        icon.setImageResource(action.viewModel.icon)
+
+        toast.show()
     }
 
     fun openWebsite(url: String) {
@@ -137,13 +177,15 @@ abstract class RoutePresenter(
         val navOptions = if (transition == destinationId) {
             // Without being able to detect if we're in developer mode,
             // it is too dangerous to RuntimeException.
-            val from = activity.resources.getResourceName(srcId)
-            val to = activity.resources.getResourceName(destinationId)
-            val graphName = activity.resources.getResourceName(navController.graph.id)
-            log.error(
-                "Cannot route from $from to $to. " +
-                    "This is a developer bug, fixable by adding an action to $graphName.xml and/or ${javaClass.simpleName}"
-            )
+            if (BuildConfig.DEBUG) {
+                val from = activity.resources.getResourceName(srcId)
+                val to = activity.resources.getResourceName(destinationId)
+                val graphName = activity.resources.getResourceName(navController.graph.id)
+                throw IllegalStateException(
+                    "Cannot route from $from to $to. " +
+                        "This is a developer bug, fixable by adding an action to $graphName.xml and/or ${javaClass.simpleName}"
+                )
+            }
             null
         } else {
             // Get the transition action out of the graph, before we manually clear the back

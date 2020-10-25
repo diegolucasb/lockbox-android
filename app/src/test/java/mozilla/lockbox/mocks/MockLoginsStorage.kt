@@ -17,7 +17,7 @@ import mozilla.lockbox.support.createDummyItem
 import org.mockito.Mockito
 
 open class MockLoginsStorage : LoginsStorage {
-    private val all = MutableList(10) { createDummyItem() }
+    private var all = MutableList(10) { createDummyItem() }
 
     private var _locked = true
 
@@ -32,6 +32,7 @@ open class MockLoginsStorage : LoginsStorage {
     }
 
     override fun add(login: ServerPassword): String {
+        all.add(login)
         return ""
     }
 
@@ -55,6 +56,9 @@ open class MockLoginsStorage : LoginsStorage {
         this._locked = false
     }
 
+    override fun ensureValid(login: ServerPassword) {
+    }
+
     override fun ensureUnlocked(encryptionKey: ByteArray) {
         this._locked = false
     }
@@ -75,6 +79,19 @@ open class MockLoginsStorage : LoginsStorage {
     override fun wipe() {}
 
     override fun wipeLocal() {}
+
+    override fun getByHostname(hostname: String): List<ServerPassword> {
+        return all.filter { hostname == it.hostname }
+    }
+
+    override fun getHandle(): Long {
+        throw UnsupportedOperationException()
+    }
+
+    override fun importLogins(logins: Array<ServerPassword>): Long {
+        all.addAll(logins)
+        return 0 // no errors
+    }
 }
 
 class MockDataStoreSupport : DataStoreSupport {

@@ -8,13 +8,16 @@ package mozilla.lockbox.store
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
 import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.WebStorage
 import android.webkit.WebView
 import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers.mainThread
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.rxkotlin.addTo
+import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.ReplaySubject
 import io.reactivex.subjects.Subject
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -25,9 +28,12 @@ import kotlinx.coroutines.rx2.asSingle
 import mozilla.appservices.fxaclient.FxaException
 import mozilla.components.concept.sync.AccessTokenInfo
 import mozilla.components.concept.sync.Avatar
+import mozilla.components.concept.sync.OAuthScopedKey
 import mozilla.components.concept.sync.Profile
 import mozilla.components.service.fxa.ServerConfig
 import mozilla.components.service.fxa.FirefoxAccount
+import mozilla.components.service.fxa.sharing.AccountSharing
+import mozilla.components.service.fxa.sharing.ShareableAccount
 import mozilla.lockbox.action.AccountAction
 import mozilla.lockbox.action.DataStoreAction
 import mozilla.lockbox.action.LifecycleAction
@@ -39,10 +45,14 @@ import mozilla.lockbox.model.FixedSyncCredentials
 import mozilla.lockbox.model.FxASyncCredentials
 import mozilla.lockbox.model.SyncCredentials
 import mozilla.lockbox.support.Constant
+import mozilla.lockbox.support.DeviceSystemTimingSupport
 import mozilla.lockbox.support.Optional
 import mozilla.lockbox.support.SecurePreferences
+import mozilla.lockbox.support.SystemTimingSupport
 import mozilla.lockbox.support.asOptional
+import org.json.JSONObject
 import java.io.File
+import java.lang.Long.min
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 
@@ -50,7 +60,8 @@ import kotlin.coroutines.CoroutineContext
 open class AccountStore(
     private val lifecycleStore: LifecycleStore = LifecycleStore.shared,
     private val dispatcher: Dispatcher = Dispatcher.shared,
-    private val securePreferences: SecurePreferences = SecurePreferences.shared
+    private val securePreferences: SecurePreferences = SecurePreferences.shared,
+    private val timingSupport: SystemTimingSupport = DeviceSystemTimingSupport.shared
 ) : ContextStore {
     companion object {
         val shared by lazy { AccountStore() }
@@ -89,8 +100,9 @@ open class AccountStore(
     private val syncCredentials: Observable<Optional<SyncCredentials>> = ReplaySubject.createWithSize(1)
     open val profile: Observable<Optional<Profile>> = ReplaySubject.createWithSize(1)
 
-    private lateinit var webView: WebView
-    private lateinit var logDirectory: File
+    private lateinit var context: Context
+
+    private val tokenRotationHandler = Handler()
 
     init {
         val resetObservable = lifecycleStore.lifecycleEvents
@@ -109,6 +121,7 @@ open class AccountStore(
                 when (it) {
                     is AccountAction.OauthRedirect -> this.oauthLogin(it.url)
                     is AccountAction.UseTestData -> this.populateTestAccountInformation(true)
+                    is AccountAction.AutomaticLogin -> this.automaticLogin(it.account)
                     is AccountAction.Reset -> this.clear()
                 }
             }
@@ -117,7 +130,7 @@ open class AccountStore(
         // Moves credentials from the AccountStore, into the DataStore.
         syncCredentials
             .map {
-                it.value?.let { credentials -> DataStoreAction.UpdateCredentials(credentials) }
+                it.value?.let { credentials -> DataStoreAction.UpdateSyncCredentials(credentials) }
                     ?: DataStoreAction.Reset
             }
             .subscribe(dispatcher::dispatch)
@@ -126,8 +139,25 @@ open class AccountStore(
 
     override fun injectContext(context: Context) {
         detectAccount()
-        webView = WebView(context)
-        logDirectory = context.getDir("webview", Context.MODE_PRIVATE)
+        this.context = context
+    }
+
+    fun shareableAccount(): ShareableAccount? {
+        return AccountSharing.queryShareableAccounts(context).firstOrNull()
+    }
+
+    private fun automaticLogin(account: ShareableAccount) {
+        fxa?.migrateFromSessionTokenAsync(
+            account.authInfo.sessionToken,
+            account.authInfo.kSync,
+            account.authInfo.kXCS
+        )
+        ?.let {
+            it.asSingle(coroutineContext)
+                .map { true }
+                .subscribe(this::populateAccountInformation, this::pushError)
+                .addTo(compositeDisposable)
+        }
     }
 
     private fun detectAccount() {
@@ -160,7 +190,7 @@ open class AccountStore(
 
     private fun populateAccountInformation(isNew: Boolean) {
         val profileSubject = profile as Subject
-        val syncCredentialSubject = syncCredentials as Subject
+
         val fxa = fxa ?: return
         securePreferences.putString(Constant.Key.firefoxAccount, fxa.toJSONString())
 
@@ -171,20 +201,67 @@ open class AccountStore(
             .subscribe(profileSubject::onNext, this::pushError)
             .addTo(compositeDisposable)
 
+        val token = securePreferences.getString(Constant.Key.accessToken)?.let {
+            accessTokenInfoFromJSON(JSONObject(it))
+        }
+
+        token?.let { handleAccessToken(it, isNew) } ?: tokenRotationHandler.post { fetchFreshToken(isNew) }
+    }
+
+    private fun fetchFreshToken(isNewLogin: Boolean = false) {
+        val fxa = fxa ?: return
         fxa.getAccessTokenAsync(Constant.FxA.oldSyncScope)
             .asMaybe(coroutineContext)
             .delay(1L, TimeUnit.SECONDS)
-            .map {
-                generateSyncCredentials(it, isNew).asOptional()
-            }
-            .subscribe(syncCredentialSubject::onNext, this::pushError)
+            .subscribe({ token ->
+                handleAccessToken(token, isNewLogin)
+            }, this::pushError)
             .addTo(compositeDisposable)
     }
 
-    private fun generateSyncCredentials(oauthInfo: AccessTokenInfo, isNew: Boolean): SyncCredentials? {
-        val fxa = fxa ?: return null
-        val tokenServerURL = fxa.getTokenServerEndpointURL()
-        return FxASyncCredentials(oauthInfo, tokenServerURL, isNew)
+    private fun handleAccessToken(
+        token: AccessTokenInfo,
+        isNewLogin: Boolean
+    ) {
+        // We've just got a new token. It might be from secure preferences (we've just been
+        // restarted) or a token refresh.
+        // 1. Update the rest of the app.
+        generateSyncCredentials(token, isNewLogin)
+            .take(1)
+            .observeOn(mainThread())
+            .subscribe((syncCredentials as Subject)::onNext, this::pushError)
+            .addTo(compositeDisposable)
+
+        // 2. Store this token in the secure preferences.
+        securePreferences.putString(Constant.Key.accessToken, token.toJSONObject().toString())
+
+        // 3. Schedule a token refresh. It may be quite a long time away.
+        // Calculate how long before the token expires in milliseconds.
+        val msDelay = token.expiresAt * 1000L - timingSupport.currentTimeMillis
+
+        // We'll wait until it's almost expired, leaving at most 10 minutes to fetch the token.
+        val refreshMargin = min(msDelay * 95L / 100L, 10 * 60 * 1000L)
+
+        // Wait until the token has nearly expired, and then fetch a new one.
+        scheduleFetchFreshToken(msDelay - refreshMargin)
+    }
+
+    private fun scheduleFetchFreshToken(msDelay: Long) {
+        // If the app is killed, then this will be refreshed when the app is restarted.
+        tokenRotationHandler.postDelayed({
+            fetchFreshToken(false)
+        }, msDelay)
+    }
+
+    private fun generateSyncCredentials(oauthInfo: AccessTokenInfo, isNew: Boolean): Observable<Optional<SyncCredentials>> {
+        return Observable.just(Unit)
+            .observeOn(Schedulers.io())
+            .map {
+                fxa?.let {
+                    val url = it.getTokenServerEndpointURL()
+                    FxASyncCredentials(oauthInfo, url, isNew) as SyncCredentials
+                }.asOptional()
+            }
     }
 
     private fun generateNewFirefoxAccount() {
@@ -202,8 +279,9 @@ open class AccountStore(
     private fun generateLoginURL() {
         val fxa = fxa ?: return
 
-        fxa.beginOAuthFlowAsync(Constant.FxA.scopes, true)
+        fxa.beginOAuthFlowAsync(Constant.FxA.scopes)
             .asMaybe(coroutineContext)
+            .map { it.url }
             .subscribe((this.loginURL as Subject)::onNext, this::pushError)
             .addTo(compositeDisposable)
     }
@@ -230,32 +308,38 @@ open class AccountStore(
         removeDeviceFromFxA()
 
         if (Looper.myLooper() != null) {
-            CookieManager.getInstance().removeAllCookies { }
+            CookieManager.getInstance().removeAllCookies(null)
             WebStorage.getInstance().deleteAllData()
         }
 
-        this.securePreferences.remove(Constant.Key.firefoxAccount)
+        tokenRotationHandler.removeCallbacksAndMessages(null)
+
+        this.securePreferences.clear()
+
         this.generateNewFirefoxAccount()
 
-        webView.clearCache(true)
-        clearLogs()
+        // Clear down the webview subsystem as best we can.
+        // Unfortunately, some of this assumes we have a webview to hand. No matter, we can just
+        // create one.
+        // This was previously being held from `injectContext` to now, (PR #694).
+        // Now, our very rare event (disconnect) is slightly slower and more memory instance,
+        // but our frequent event (injectContext) is fast and svelte.
+        WebView(context).clearCache(true)
+
+        // Clear the log directories.
+        val logDirectory = context.getDir("webview", Context.MODE_PRIVATE)
+        clearLogFolder(logDirectory)
     }
 
     private fun removeDeviceFromFxA() {
         if (fxa != null) {
-            fxa!!.deviceConstellation()
-                .destroyCurrentDeviceAsync()
+            fxa!!.disconnectAsync()
                 .asSingle(coroutineContext)
                 .subscribe()
                 .addTo(compositeDisposable)
         } else {
             log.info("FxA is null. No devices to disconnect.")
         }
-    }
-
-    private fun clearLogs() {
-        clearLogFolder(logDirectory)
-        log.info("Log pruning completed.")
     }
 
     private fun clearLogFolder(dir: File) {
@@ -296,4 +380,34 @@ open class AccountStore(
 
         dispatcher.dispatch(SentryAction(it))
     }
+}
+
+private fun AccessTokenInfo.toJSONObject() = JSONObject()
+        .put("scope", scope)
+        .put("token", token)
+        .put("expiresAt", expiresAt)
+        .put("key", key?.toJSONObject())
+
+private fun OAuthScopedKey.toJSONObject() = JSONObject()
+        .put("kty", kty)
+        .put("scope", scope)
+        .put("kid", kid)
+        .put("k", k)
+
+private fun accessTokenInfoFromJSON(obj: JSONObject): AccessTokenInfo? {
+    return AccessTokenInfo(
+        scope = obj.optString("scope", null) ?: return null,
+        token = obj.optString("token", null) ?: return null,
+        expiresAt = obj.optLong("expiresAt", 0L),
+        key = obj.optJSONObject("key")?.let { oauthScopedKeyFromJSON(it) }
+    )
+}
+
+private fun oauthScopedKeyFromJSON(obj: JSONObject): OAuthScopedKey? {
+    return OAuthScopedKey(
+        kty = obj.optString("kty", null) ?: return null,
+        scope = obj.optString("scope", null) ?: return null,
+        kid = obj.optString("kid", null) ?: return null,
+        k = obj.optString("k", null) ?: return null
+    )
 }

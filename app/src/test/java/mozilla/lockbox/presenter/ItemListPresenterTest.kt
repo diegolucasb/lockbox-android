@@ -34,7 +34,6 @@ import mozilla.lockbox.store.DataStore
 import mozilla.lockbox.store.FingerprintStore
 import mozilla.lockbox.store.NetworkStore
 import mozilla.lockbox.store.SettingStore
-import mozilla.lockbox.support.Consumable
 import mozilla.lockbox.support.Optional
 import org.junit.Assert
 import org.junit.Before
@@ -81,6 +80,7 @@ open class ItemListPresenterTest {
         val itemSelectedStub = PublishSubject.create<ItemViewModel>()
         val filterClickStub = PublishSubject.create<Unit>()
         val noEntriesClickStub = PublishSubject.create<Unit>()
+        val createNewEntryClickStub = PublishSubject.create<Unit>()
         val sortItemSelectionStub = PublishSubject.create<Setting.ItemListSort>()
         val disclaimerActionStub = PublishSubject.create<AlertState>()
         val lockNowSelectionStub = PublishSubject.create<Unit>()
@@ -100,6 +100,9 @@ open class ItemListPresenterTest {
 
         override val lockNowClick: Observable<Unit>
             get() = lockNowSelectionStub
+
+        override val createNewEntryClick: Observable<Unit>
+            get() = createNewEntryClickStub
 
         override val noEntriesClicks: Observable<Unit>
             get() = noEntriesClickStub
@@ -130,14 +133,6 @@ open class ItemListPresenterTest {
         override val isRefreshing: Boolean = false
 
         override fun stopRefreshing() {}
-
-        override fun showToastNotification(strId: Int) {
-            toastNotificationArgStrId = strId
-        }
-
-        override fun showDeleteToastNotification(text: String) {
-            toastNotificationArgText = text
-        }
     }
 
     val listStub = PublishSubject.create<List<ServerPassword>>()
@@ -168,7 +163,6 @@ open class ItemListPresenterTest {
     private var isConnected: Observable<Boolean> = PublishSubject.create()
     private var isConnectedObserver: TestObserver<Boolean> = TestObserver.create<Boolean>()
     private val profileStub = PublishSubject.create<Optional<Profile>>()
-    private var deleteItemSubjectStub = PublishSubject.create<Consumable<ServerPassword>>()
 
     val view: FakeView = spy(FakeView())
     val dispatcher = Dispatcher()
@@ -184,7 +178,6 @@ open class ItemListPresenterTest {
         PowerMockito.`when`(settingStore.itemListSortOrder).thenReturn(itemListSortStub)
         PowerMockito.`when`(dataStore.list).thenReturn(listStub)
         PowerMockito.`when`(dataStore.syncState).thenReturn(syncStateStub)
-        PowerMockito.`when`(dataStore.deletedItem).thenReturn(deleteItemSubjectStub)
 
         PowerMockito.whenNew(AccountStore::class.java).withAnyArguments().thenReturn(accountStore)
         PowerMockito.whenNew(SettingStore::class.java).withAnyArguments().thenReturn(settingStore)
@@ -225,7 +218,7 @@ open class ItemListPresenterTest {
         val id = "the_guid"
         view.itemSelectedStub.onNext(ItemViewModel("title", "subtitle", id))
 
-        dispatcherObserver.assertLastValue(RouteAction.ItemDetail(id))
+        dispatcherObserver.assertLastValue(RouteAction.DisplayItem(id))
     }
 
     @Test
@@ -294,6 +287,12 @@ open class ItemListPresenterTest {
     }
 
     @Test
+    fun `click on create button takes you to manual create view`() {
+        view.createNewEntryClickStub.onNext(Unit)
+        Assert.assertTrue(dispatcherObserver.values().last() is RouteAction.CreateItem)
+    }
+
+    @Test
     fun `no matching entries clicks routes to FAQ`() {
         view.noEntriesClickStub.onNext(Unit)
         dispatcherObserver.assertLastValue(AppWebPageAction.FaqSync)
@@ -326,21 +325,6 @@ open class ItemListPresenterTest {
     fun `remove sync loading indicator`() {
         syncStateStub.onNext(DataStore.SyncState.NotSyncing)
         Assert.assertEquals(false, view.isLoading)
-    }
-    /* timeout to be fixed in https://github.com/mozilla-lockwise/lockwise-android/issues/791
-    @Test
-    fun `sync timeout indicator`() {
-        syncStateStub.onNext(DataStore.SyncState.TimedOut)
-        Assert.assertEquals(false, view.isLoading)
-        Assert.assertEquals(R.string.sync_timed_out, view.toastNotificationArgStrId)
-    }
-    */
-    @Test
-    fun `item deleted toast`() {
-        val item = ServerPasswordTestHelper().item1
-        val hostname = item.hostname
-        deleteItemSubjectStub.onNext(Consumable(item))
-        Assert.assertEquals(hostname, view.toastNotificationArgText)
     }
 
     @Test

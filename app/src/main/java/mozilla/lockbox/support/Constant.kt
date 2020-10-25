@@ -23,7 +23,6 @@ object Constant {
         const val appToken = "383z4i46o48w"
 
         val delay: Long = if (isTesting()) 0 else 1
-        val syncTimeout: Long = 20
     }
 
     object FxA {
@@ -36,24 +35,14 @@ object Constant {
         val scopes = setOf(profileScope, lockboxScope, oldSyncScope)
     }
 
-    object FxAErrors {
-        const val SyncAuthInvalid = "SyncAuthInvalidException"
-        const val InvalidKey = "InvalidKeyException"
-        const val LoginsStorage = "LoginsStorageException"
-    }
-
     object Faq {
-        const val uri = "https://lockbox.firefox.com/faq.html"
-        const val topUri = uri + "#top"
-        const val savedUri = uri + "#how-do-i-get-my-saved-logins-into-firefox-lockbox"
-        const val securityUri = uri + "#what-security-technologies-does-firefox-lockbox-use"
-        const val syncUri = uri + "#how-do-i-enable-sync-on-firefox"
-        const val createUri = uri + "#how-do-i-create-new-entries"
-        const val editUri = uri + "#how-do-i-edit-existing-entries"
+        const val uri = "https://support.mozilla.org/en-US/kb"
+        const val faqUri = uri + "/getting-started-firefox-lockwise"
+        const val syncUri = uri + "/sync-logins-firefox-android"
     }
 
     object Privacy {
-        const val uri = "https://lockbox.firefox.com/privacy.html"
+        const val uri = "https://support.mozilla.org/en-US/kb/firefox-lockwise-and-privacy"
     }
 
     object SendFeedback {
@@ -76,6 +65,8 @@ object Constant {
         const val bootCompletedIntent = "android.intent.action.BOOT_COMPLETED"
         const val clearClipboardIntent = "mozilla.lockbox.intent.CLEAR_CLIPBOARD"
         const val clipboardDirtyExtra = "clipboard-dirty"
+        const val accessToken = "access-token"
+        const val parsedStructure = "parsed-structure"
     }
 
     object FingerprintTimeout {

@@ -6,18 +6,30 @@
 
 package mozilla.lockbox.action
 
-import androidx.annotation.StringRes
-import mozilla.lockbox.R
-
 sealed class ItemDetailAction(
     override val eventMethod: TelemetryEventMethod,
     override val eventObject: TelemetryEventObject
 ) : TelemetryAction {
-    data class TogglePassword(val displayed: Boolean)
-        : ItemDetailAction(TelemetryEventMethod.tap, TelemetryEventObject.reveal_password)
+    data class SetPasswordVisibility(val visible: Boolean) :
+        ItemDetailAction(TelemetryEventMethod.tap, TelemetryEventObject.reveal_password)
 
-    enum class EditItemMenu(@StringRes val titleId: Int) {
-        EDIT(R.string.edit),
-        DELETE(R.string.delete)
-    }
+    data class BeginEditItemSession(val itemId: String) :
+        ItemDetailAction(TelemetryEventMethod.tap, TelemetryEventObject.begin_edit_item_session)
+    object EditItemSaveChanges :
+        ItemDetailAction(TelemetryEventMethod.tap, TelemetryEventObject.update_credential)
+    object EndEditItemSession :
+        ItemDetailAction(TelemetryEventMethod.tap, TelemetryEventObject.end_edit_item_session)
+
+    object BeginCreateItemSession :
+        ItemDetailAction(TelemetryEventMethod.tap, TelemetryEventObject.begin_manual_create_session)
+    object CreateItemSaveChanges :
+        ItemDetailAction(TelemetryEventMethod.tap, TelemetryEventObject.manual_create_save)
+    object EndCreateItemSession :
+        ItemDetailAction(TelemetryEventMethod.tap, TelemetryEventObject.end_manual_create_session)
+
+    data class EditField(
+        val username: String? = null,
+        val password: String? = null,
+        val hostname: String? = null
+    ) : ItemDetailAction(TelemetryEventMethod.edit, TelemetryEventObject.update_credential)
 }

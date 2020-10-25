@@ -9,7 +9,7 @@
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:theme="@style/AppTheme"
+        android:theme="@style/OnboardingConfirmation"
         android:id="@+id/fragment_onboarding_confirmation">
 
     <TextView
@@ -38,7 +38,7 @@
             android:drawablePadding="@dimen/onboarding_drawable_padding"
             android:layout_gravity="center_horizontal"
             android:drawableStart="@drawable/ic_access"
-            android:text="@string/access_description"
+            android:text="@string/onboarding_access_description"
     />
 
     <TextView
@@ -55,9 +55,8 @@
             android:maxWidth="@dimen/onboarding_max_width"
             android:drawablePadding="@dimen/onboarding_drawable_padding"
             android:drawableStart="@drawable/ic_security"
-            android:contentDescription="@string/security_content_description"
+            android:text="@string/onboarding_security_description"
     />
-
     <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -71,7 +70,7 @@
             android:maxWidth="@dimen/onboarding_max_width"
             android:drawablePadding="@dimen/onboarding_drawable_padding"
             android:drawableStart="@drawable/ic_convenience"
-            android:text="@string/convenience_description"
+            android:text="@string/onboarding_convenience_description"
     />
 
     <View

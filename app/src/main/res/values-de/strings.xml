@@ -12,7 +12,11 @@
     <!-- This is the label a screenreader uses to inform the user they selected a link that will open a webpage to learn more about the feature or setting. -->
     <string name="learn_more_description">Einen Link öffnen, um mehr zu erfahren</string>
 
-    <!-- This is used as the label on a button on a first-run welcome screen to sign in and start using the application -->
+    <!-- This is used as the label on a button on a first-run welcome screen to automatically sign in to an existing account and start using the application -->
+    <string name="welcome_start_automatic_btn">%s</string>
+    <!-- This is used as the label on a button on a first-run welcome screen to force manual sign in and start using the application -->
+    <string name="welcome_start_force_manual_btn">Anderes Konto</string>
+    <!-- This is used as the label on a button on a first-run welcome screen to manually sign in (no existing account) and start using the application -->
     <string name="welcome_start_btn">Erste Schritte</string>
     <!-- This provides context near a button on the first-run welcome screen to describe application requirements. Firefox Account is to be translated consistently to match use in other Firefox products. %1$s will be replaced with application name. -->
     <string name="welcome_instructions">Um %1$s zu verwenden, benötigst du ein Firefox-Konto mit gespeicherten Zugangsdaten.</string>
@@ -30,7 +34,7 @@
     <!-- This is the label for the navigation item that opens a Frequently Asked Questions web page -->
     <string name="nav_menu_faq">FAQ</string>
     <!-- This is the label for the navigation item that opens a survey or feedback web page to submit to the developers -->
-    <string name="nav_menu_feedback">Feedback geben</string>
+    <string name="nav_menu_feedback">Feedback abgeben</string>
     <!-- This is the label for the navigation item that opens a screen to manage the user account currently signed in to the application -->
     <string name="nav_menu_account">Konto</string>
     <!-- This is the label for the navigation item that opens a settings screen with options and preferences and more application information -->
@@ -44,7 +48,7 @@
     <string name="unlock_button">Entsperren</string>
 
     <!-- This message appears in a toast informing the user it is currently downloading and syncing login (a saved login is basically the URL, username and password) data -->
-    <string name="syncing_logins">Zugangsdaten synchronisieren…</string>
+    <string name="syncing_logins">Zugangsdaten werden synchronisiert…</string>
 
     <!-- This is the label used by screenreaders to inform the user the selected menu is for sorting the saved logins in the list -->
     <string name="sort_description">Zugangsdaten sortieren</string>
@@ -67,8 +71,6 @@
 
     <!-- This is shown when a user has entered search terms that have filtered the list of logins to find no results -->
     <string name="no_matching_logins">Keine passenden Zugangsdaten.</string>
-    <!-- This explains that if no logins are found and were expected, to add new logins through the Firefox desktop browser -->
-    <string name="save_firefox_disclaimer">Um hier weitere Zugangsdaten zu sehen, musst du sie erst in Firefox speichern.</string>
 
     <!-- This is a heading that appears above the URL in context of a detailed item view -->
     <string name="hint_hostname">Internetadresse</string>
@@ -76,8 +78,6 @@
     <string name="hint_username">Benutzername</string>
     <!-- This is a heading that appears above a password in context of a detailed item view -->
     <string name="hint_password">Passwort</string>
-    <!-- This message appears to link to a web page explaining how to make changes to the details -->
-    <string name="learn_to_edit_login">Finde heraus, wie du diese Zugangsdaten bearbeiten kannst</string>
 
     <!-- This describes an icon to screenreaders that the button tapped will open the web address in a web browser -->
     <string name="launch_hostname_content_description">Grafik: Internetadresse im Browser öffnen</string>
@@ -221,15 +221,11 @@
     <!-- This is the button to dismiss the final onboarding screen -->
     <string name="finish">Abschließen</string>
     <!-- This description of the app functionality is shown on the final onboarding screen -->
-    <string name="access_description">Greife über dein Handy auf alle in Firefox gespeicherten Zugangsdaten zu</string>
-    <!-- This is an accessible content description for the security information link text. %1$s will be replaced with application name -->
-    <string name="security_content_description">Dies ist ein Link zu einer Beschreibung der Sicherheitsmaßnahmen in %1$s.</string>
-    <!-- This description of the app security is shown on the final onboarding screen. %s will be replaced with the security link. -->
-    <string name="security_description">Synchronisiere zwischen Geräten mit sicherer %s</string>
-    <!-- This text is displayed as a link in the security description. -->
-    <string name="security_link">256-Bit-Verschlüsselung</string>
+    <string name="onboarding_access_description">Greife über dein Handy auf alle in Firefox gespeicherten Zugangsdaten zu</string>
+    <!-- This description of the app security is shown on the final onboarding screen. -->
+    <string name="onboarding_security_description">Synchronisiere zwischen Geräten mit sicherer 256-Bit-Verschlüsselung</string>
     <!-- This description of the app convenience is shown on the final onboarding screen. -->
-    <string name="convenience_description">Entsperre die App einfach per Fingerabdruck</string>
+    <string name="onboarding_convenience_description">Entsperre die App einfach per Fingerabdruck</string>
 
     <!-- This is the title of the device security dialog box. -->
     <string name="secure_your_device">Sichere dein Gerät.</string>
@@ -252,5 +248,55 @@
 
     <!-- This is the placeholder text for an empty or null username. -->
     <string name="no_username">(Kein Benutzername)</string>
-    <!--<string name="sync_timed_out">Zeitüberschreitung bei Synchronisation</string>-->
+
+    <!-- This is the description for the kebab menu in the item detail toolbar. -->
+    <string name="kebab_menu">Weitere Optionen</string>
+    <!-- This is the text on an item in the item detail toolbar menu to delete an entry. -->
+    <string name="delete">Löschen</string>
+    <!-- This is the confirmation message title seen when attempting to delete a login. -->
+    <string name="delete_this_login">Diese Zugangsdaten löschen?</string>
+    <!-- This is the description for the deletion dialog. -->
+    <string name="delete_description">Dies löscht diese Zugangsdaten von %1$s und Firefox.</string>
+    <!-- This is the text on an item in the item detail toolbar menu to edit an entry. -->
+    <string name="edit">Bearbeiten</string>
+
+    <!-- This is the description for the entry password in context of an edit item view. -->
+    <string name="entry_password_description">Passwort für diesen Eintrag.</string>
+    <!-- This is the title text on the dialog when you attempt to close the edit view and changes have been made. -->
+    <string name="discard_changes">Änderungen verwerfen?</string>
+    <!-- This is the additional text when you attempt to close the edit view and changes have been made. -->
+    <string name="discard_changes_description">Ihre Änderungen werden nicht gespeichert.</string>
+    <!-- This is the text on the button to discard your current changes from the edit entry view. -->
+    <string name="discard">Verwerfen</string>
+    <!-- This is the description for the hostname in the edit entry view. -->
+    <string name="web_address_description">Der Hostname</string>
+    <!-- This is the description for the username in the edit entry view. -->
+    <string name="username_description">Der Benutzername</string>
+    <!-- This is the title of the edit login page. -->
+    <string name="edit_login_title">Zugangsdaten bearbeiten</string>
+
+    <!-- This is the error message that is shown in edit or create view when input text for password is not valid. -->
+    <string name="password_invalid_text">Passwort kann nicht leer sein</string>
+
+    <!-- This is the error message that is shown in edit or create view when a username matches a previously existing credential for that domain combination. -->
+    <string name="username_duplicate_exists">Es existieren bereits Zugangsdaten mit diesem Benutzernamen</string>
+
+    <!-- This is the text description that is shown in the manual create view underneath the hostname field to describe a valid hostname. -->
+    <string name="create_hostname_description">Stellen Sie sicher, dass dies mit der genauen Domain der Website übereinstimmt, auf die Sie verweisen (inklusive „https://“ und „www”).</string>
+
+    <!-- This is the title of the create new login page. -->
+    <string name="create_title">Neue Zugangsdaten</string>
+
+    <!-- This is the hint text that is shown inline on the username field of the create new login page. -->
+    <string name="create_username_hint_text">z.B. janedoe</string>
+
+    <!-- This is the hint text that is shown inline on the hostname field of the create new login page. -->
+    <string name="create_hostname_hint_text">https://www.example.com</string>
+
+    <!-- This is an error message shown below the hostname field of the create new login page when a hostname is invalid. -->
+    <string name="hostname_invalid_text">Die Internetadresse muss \„https://\“ oder \„http://\“ enthalten</string>
+
+    <!-- This is the error message that is shown in the create view when input text for hostname is empty. -->
+    <string name="hostname_empty_invalid_text">Hostname darf nicht leer sein</string>
+
 </resources>

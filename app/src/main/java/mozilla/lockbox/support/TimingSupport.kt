@@ -28,13 +28,16 @@ open class TimingSupport(
     private val compositeDisposable = CompositeDisposable()
     private lateinit var preferences: SharedPreferences
 
-    var systemTimingSupport: SystemTimingSupport = SystemSystemTimingSupport()
+    var systemTimingSupport: SystemTimingSupport = DeviceSystemTimingSupport()
 
     open val shouldLock: Boolean
         get() = lockCurrentlyRequired()
 
     open val shouldSync: Boolean
         get() = syncCurrentlyRequired()
+
+    val currentTimeMillis: Long
+        get() = systemTimingSupport.currentTimeMillis
 
     override fun injectContext(context: Context) {
         preferences = PreferenceManager.getDefaultSharedPreferences(context)

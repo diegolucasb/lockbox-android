@@ -1,5 +1,164 @@
 # Release Notes
 
+## 4.0.2 (Build 6460)
+
+Adds a fix for an autofill failure on Android 11.
+
+Changes since last build:
+
+- Fixes a 'null' toast on autofill failure on Android 11 (#1219)
+
+## 4.0.1 (Build 6347)
+
+Add the ability for users to control their tracked telemetry (linked through legacy telemetry client id) and prevent any further telemetry from being tracked for their account when they opt out.
+
+Changes since last build:
+
+- Add the legacy telemetry client id to the deletion request ping (#1195)
+
+## 4.0.0 (Build 6087)
+
+Add the ability to manually create an entry. Improve error messaging for the user. Autofill footer now adjusts to dark mode.
+
+Changes since last build:
+
+- Update release process docs (#1143)
+- Toast placement for copy, create, delete (#1166)
+
+All changes since version 3.3.0:
+
+- Import l10n: add EN-GB, UK, RU, ZH-RTW, CS (#1119)
+- Manual create (#1093)
+- Fixup autofill footer in dark mode. (#1115)
+- Add missing locales screengrab file (#1132)
+- Fixup edit regressions introduced during edit/create refactor (#1133)
+- Update app services to version 0.46.0 (#1124)
+- Update string names to send update upstream to l10n (#1142)
+- Show errors in create and edit only after the user makes one (#1140)
+- Successful create toast notification (#1123)
+- Use red trash icon and fix deleted toast (#1146)
+
+## 4.0.0 (Build 6013)
+
+Manual create.
+
+All changes since version 3.3.0:
+
+- Import l10n: add EN-GB, UK, RU, ZH-RTW, CS (#1119)
+- Manual create (#1093)
+- Fixup autofill footer in dark mode. (#1115)
+- Add missing locales screengrab file (#1132)
+- Fixup edit regressions introduced during edit/create refactor (#1133)
+- Update app services to version 0.46.0 (#1124)
+- Update string names to send update upstream to l10n (#1142)
+- Show errors in create and edit only after the user makes one (#1140)
+- Successful create toast notification (#1123)
+- Use red trash icon and fix deleted toast (#1146)
+- Update release process docs (#1143)
+- Toast placement for copy, create, delete (#1166)
+
+## 3.3.0 (Build 5783)
+
+Stability and UI cleanup.
+
+All changes since version 3.2.0:
+
+- Bump the required Android Components version to 19.0.1 (#1070)
+- Update ui tests (#1083)
+- Fix interrupts causing the app to go to the item list. (#1075)
+- UX cleanup part deux (#1071)
+- Introduce Glean SDK (#1085)
+- Metadata cleanups for datastore and autofill. (#1102)
+- Localization updates (#1110)
+
+## 3.3.0 (Build 5658)
+
+Stability and UI cleanup.
+
+All changes since version 3.2.0:
+
+- Bump the required Android Components version to 19.0.1 (#1070)
+- Update ui tests (#1083)
+- Fix interrupts causing the app to go to the item list. (#1075)
+- UX cleanup part deux (#1071)
+
+## 3.2.0 (Build 5522)
+
+Stability and UI cleanup.
+
+All changes since version 3.1.0:
+
+- Search bar text handles have violet background (#1035)
+- Reconcile l10n strings for translation #1020
+- Close keyboard when exiting feedback form (#1057)
+- Update ---feature.md (#1063)
+- The device back button doesn't have the same functionality with the X button in Edit Login Mode (994)
+- Remove "name" field from the edit view (#1010)
+- Whooops! Wrong URL displayed when accessing Learn More from Lockwise settings (#1048)
+
+## 3.1.0 (Build 5356)
+
+Improve autofill detection and increase target SDK to 28.
+
+All changes since version 3.0.1:
+
+- Hide soft keyboard on unlock with pin (#1024)
+- Fixup crash in isButton with Java/Kotlin null dereference (#1039)
+- Make autofill detection more robust (#1031)
+- Increase target sdk to 28 (#1026)
+- Remove color state change on hostname when clicking outside of the cardview (#1030)
+- Remove name field from edit view (#1025)
+
+## 3.0.1 (Build 5215)
+
+Improve threading and log in keyboard experience.
+
+All changes since version 3.0.0:
+
+- Soft pan layout when keyboard is opened on webview (#929)
+- Update syncCredentials on the correct thread after their generation (#1012, #1013)
+
+## 3.0.0 (Build 5177)
+
+Add capabilities to edit entries, delete entries, and capture new entries from autofill.
+
+All changes since version 2.0.0: 
+
+- Use extra fields to detect duplicates (#997)
+- Generate the token URL of the main thread (#1003)
+- 980: launch hostname from icon in detail (#1004)
+- 948: Prevent duplicates during edit
+- Cache access tokens (#945)
+- 873: Update faq links to sumo (#951)
+- Import l10n. (#964)
+- 956: Disable editing hostname (#963)
+- 938-uitests-add-error-handling-edit-view (#966)
+- 920-add-new-edit-screenshots-tests (#922)
+- Add intent filter for launching app from a URL (#967)
+- Autofill capture an existing login new to Lockwise (#943)
+- 899: UX cleanup for edit (#962)
+- 969 refactor screenshotstests use robot (#970)
+
+## 2.0.0 (Build 4820)
+
+Refine telemetry for sync and fix crashes.
+
+All changes since version 1.1.3: 
+
+- Telemetry for sync (#835)
+- String updates for localization (#852)
+- Update app services, android components, and megazord configuration (#865)
+- Update Readme with l10n process (#872)
+- Fix obvious NPE sync crash (#884)
+- Create infrastructure for feature flags (#882)
+- Add telemetry probes to syncIfRequired trigger syncs (#887)
+- Import strings from l10n (#893)
+- Remove timeout from sync (#889)
+- Fail fast if the edge between to routes is not in the nav graph. (#895)
+- Add fxalogin to autofill onboarding route. (#901)
+- Routing back to itemlist on login/search/feedback forms (#890)
+- Add null text value for empty usernames (#902)
+
 ## 1.1.3 (Build 4584)
 
 We fixed more bugs to help sync for some users, as well as some UI updates to standardize localized views.

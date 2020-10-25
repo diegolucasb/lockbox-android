@@ -7,24 +7,26 @@
 <resources>
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-        <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/color_primary</item>
         <item name="colorPrimaryDark">@color/color_primary_dark</item>
         <item name="android:textColor">@color/text_white</item>
         <item name="android:windowTranslucentStatus">false</item>
-        <item name="android:windowBackground">@null</item>
+        <item name="android:windowBackground">@color/background_white</item>
         <item name="android:colorControlActivated">@color/switch_activated</item>
-        <item name="android:background">@color/background_white</item>
+        <item name="android:background">@android:color/transparent</item>
         <item name="actionMenuTextAppearance">@style/NavDrawerStyle</item>
         <item name="android:actionMenuTextAppearance">@style/NavDrawerStyle</item>
         <item name="actionMenuTextColor">@style/NavDrawerStyle</item>
         <item name="android:titleTextAppearance">@style/NavDrawerStyle</item>
+        <item name="android:colorAccent">@color/violet_70</item>
+        <item name="popupMenuStyle">@style/PopupMenu</item>
     </style>
 
     <style name="AppTheme.Launcher" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowBackground">@null</item>
         <item name="android:background">@drawable/launch_screen</item>
         <item name="android:statusBarColor">@color/color_primary_dark</item>
+        <item name="android:popupBackground">@android:color/transparent</item>
     </style>
 
     <style name="NoBackgroundTheme" parent="Theme.AppCompat.Light.NoActionBar">
@@ -35,6 +37,7 @@
         <item name="android:background">@android:color/transparent</item>
         <item name="colorPrimaryDark">@android:color/transparent</item>
         <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:popupBackground">@android:color/transparent</item>
     </style>
 
     <style name="ToolBar" parent="ThemeOverlay.AppCompat.ActionBar">
@@ -48,6 +51,47 @@
 
     <style name="BackableToolBar" parent="ToolBar">
         <item name="android:background">@color/color_primary</item>
+        <item name="android:colorControlActivated">@color/violet_70</item>
+        <item name="android:textColor">@color/violet_70</item>
+        <item name="android:colorAccent">@color/violet_70</item>
+        <item name="android:editTextColor">@color/violet_70</item>
+        <item name="colorPrimary">@color/color_primary</item>
+        <item name="colorPrimaryDark">@color/color_primary_dark</item>
+        <item name="android:colorControlNormal">@color/violet_70</item>
+    </style>
+
+    <style name="EditItem" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:popupBackground">@android:color/transparent</item>
+        <item name="android:background">@color/background_grey</item>
+        <item name="android:textColorHint">@color/black_60_percent</item>
+        <item name="android:colorControlNormal">@color/dark_grey</item>
+        <item name="errorTextAppearance">@style/ErrorText</item>
+    </style>
+
+    <style name="CreateItem" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:popupBackground">@color/background_grey</item>
+        <item name="android:background">@color/background_grey</item>
+        <item name="android:textColorHint">@color/black_60_percent</item>
+        <item name="android:colorControlNormal">@color/dark_grey</item>
+        <item name="errorTextAppearance">@style/ErrorText</item>
+    </style>
+
+    <style name="ErrorText" parent="TextAppearance.AppCompat">
+        <item name="android:textColor">@color/red</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0.03</item>
+        <item name="android:lineSpacingExtra">4sp</item>
+    </style>
+
+    <style name="HintText" parent="TextAppearance.AppCompat">
+        <item name="android:textColor">@color/hint_edit_text</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0.03</item>
+        <item name="android:lineSpacingExtra">4sp</item>
     </style>
 
     <style name="TextAppearanceWidgetEventToolbarTitle">
@@ -56,45 +100,95 @@
         <item name="android:textSize">20sp</item>
         <item name="android:textColor">@android:color/white</item>
         <item name="android:background">@color/color_primary</item>
+        <item name="android:popupBackground">@android:color/transparent</item>
     </style>
+
     <style name="TextAppearance">
         <item name="android:letterSpacing">0.02</item>
         <item name="android:fontFamily">sans-serif</item>
         <item name="android:textSize">14sp</item>
         <item name="android:lineSpacingExtra">6sp</item>
+        <item name="android:popupBackground">@android:color/transparent</item>
     </style>
+
     <style name="TextAppearanceSortMenuItem" parent="@style/TextAppearance">
         <item name="android:textColor">@color/black_87_percent</item>
     </style>
+
     <style name="ToolbarButton">
         <item name="android:tint">@android:color/white</item>
         <item name="android:background">@null</item>
         <item name="android:textColorPrimary">@android:color/white</item>
         <item name="android:textColorSecondary">@android:color/white</item>
     </style>
-    <style name="EditTextStyle" parent="@android:style/Widget.EditText">
+
+    <style name="EditItemTextStyle" parent="@android:style/Widget.EditText">
         <item name="android:textSize">16sp</item>
         <item name="android:fontFamily">sans-serif</item>
         <item name="android:textStyle">normal</item>
         <item name="android:textColor">@color/text_ink</item>
         <item name="android:letterSpacing">0.01</item>
+        <item name="android:scrollHorizontally">false</item>
+        <item name="android:isScrollContainer">false</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:singleLine">true</item>
         <item name="android:lineSpacingExtra">8sp</item>
         <item name="android:backgroundTint">@color/background_white</item>
+        <item name="android:popupBackground">@android:color/transparent</item>
     </style>
-    <style name="PasswordTextStyle" parent="@android:style/Widget.EditText">
-        <item name="android:textSize">16sp</item>
-        <item name="android:fontFamily">monospace</item>
+
+    <style name="PasswordHint" parent="@android:style/Widget.EditText">
+        <item name="android:fontFamily">sans-serif</item>
         <item name="android:textStyle">normal</item>
         <item name="android:textColor">@color/text_ink</item>
         <item name="android:letterSpacing">0.01</item>
-        <item name="android:lineSpacingExtra">8sp</item>
         <item name="android:backgroundTint">@color/background_white</item>
+        <item name="android:popupBackground">@android:color/transparent</item>
     </style>
+
     <style name="WelcomeScreen" parent="AppTheme">
         <item name="android:background">@color/color_primary</item>
         <item name="android:windowBackground">@color/color_primary</item>
         <item name="android:colorBackground">@color/color_primary</item>
+        <item name="android:colorControlActivated">@color/violet_70</item>
     </style>
+
+    <style name="AccountSettings" parent="AppTheme">
+        <item name="android:background">@color/background_white</item>
+        <item name="android:colorControlActivated">@color/violet_70</item>
+    </style>
+
+    <style name="AppSettings" parent="AppTheme">
+        <item name="android:background">@color/background_white</item>
+        <item name="android:colorControlActivated">@color/violet_70</item>
+    </style>
+
+    <style name="NavHeader" parent="AppTheme">
+        <item name="android:background">@color/color_primary_dark</item>
+        <item name="android:colorControlActivated">@color/violet_70</item>
+    </style>
+
+    <style name="ListCellItem" parent="AppTheme">
+        <item name="android:background">@color/background_white</item>
+        <item name="android:colorControlActivated">@color/violet_70</item>
+    </style>
+
+    <style name="Filter" parent="AppTheme">
+        <item name="android:background">@color/background_grey</item>
+        <item name="android:colorControlActivated">@color/violet_70</item>
+        <item name="android:textColor">@color/violet_70</item>
+        <item name="android:colorAccent">@color/violet_70</item>
+        <item name="android:editTextColor">@color/violet_70</item>
+        <item name="colorPrimary">@color/color_primary</item>
+        <item name="colorPrimaryDark">@color/color_primary_dark</item>
+        <item name="android:colorControlNormal">@color/violet_70</item>
+    </style>
+
+    <style name="OnboardingConfirmation" parent="AppTheme">
+        <item name="android:background">@color/background_white</item>
+        <item name="android:colorControlActivated">@color/violet_70</item>
+    </style>
+
     <style name="AlertDialogStyle" parent="Theme.AppCompat.Light.Dialog">
         <item name="android:windowBackground">@drawable/rounded_corner_bg_white</item>
         <item name="android:textColorPrimary">@color/text_ink</item>
@@ -103,6 +197,7 @@
         <item name="colorAccent">@color/violet_70</item>
         <item name="buttonBarButtonStyle">@style/AlertButtonStyle</item>
     </style>
+
     <style name="DeleteDialogStyle" parent="Theme.AppCompat.Light.Dialog">
         <item name="android:windowBackground">@drawable/rounded_corner_bg_white</item>
         <item name="android:textColorPrimary">@color/black_60_percent</item>
@@ -110,6 +205,7 @@
         <item name="buttonBarButtonStyle">@style/AlertButtonStyle</item>
         <item name="android:lineSpacingExtra">8sp</item>
     </style>
+
     <style name="AlertButtonStyle" parent="Widget.AppCompat.Button.Borderless">
         <item name="android:textColor">@color/violet_70</item>
         <item name="android:letterSpacing">0.09</item>
@@ -118,6 +214,7 @@
         <item name="android:textSize">14sp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
+
     <style name="NavDrawerStyle" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:textSize">16sp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
@@ -125,6 +222,7 @@
         <item name="android:lineSpacingExtra">6.5sp</item>
         <item name="android:drawableTint">@color/color_primary_dark</item>
     </style>
+
     <style name="NavDrawerButtonStyle" parent="Widget.AppCompat.Button.Borderless">
         <item name="android:textSize">16sp</item>
         <item name="android:textAllCaps">false</item>
@@ -134,23 +232,67 @@
         <item name="android:stateListAnimator">@null</item>
         <item name="android:drawableTint">@color/color_primary_dark</item>
     </style>
+
     <style name="NoTitleDialog" parent="@android:style/Theme.Dialog">
         <item name="android:windowFrame">@null</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsFloating">true</item>
         <item name="android:background">@android:color/transparent</item>
+        <item name="android:popupBackground">@android:color/transparent</item>
     </style>
-    <style name="PopupTheme" parent="@style/Widget.AppCompat.PopupWindow">
+
+    <style name="PopupMenu" parent="@style/Widget.AppCompat.PopupWindow">
+        <item name="android:popupBackground">@null</item>
+        <item name="android:background">@drawable/rounded_corner_bg_white</item>
         <item name="android:popupEnterTransition">@android:transition/slide_top</item>
+        <item name="android:textColor">@color/black_87_percent</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0.02</item>
+        <item name="android:lineSpacingExtra">6sp</item>
+        <item name="android:paddingStart">1dp</item>
+        <item name="android:dropDownVerticalOffset">-34dp</item>
+        <item name="android:dropDownHorizontalOffset">34dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:popupElevation">14dp</item>
+        <item name="android:elevation">0dp</item>
     </style>
+
+    <style name="PopupKebabMenu" parent="@style/Widget.AppCompat.PopupWindow">
+        <item name="android:popupBackground">@null</item>
+        <item name="android:background">@drawable/rounded_corner_bg_white</item>
+        <item name="android:popupEnterTransition">@android:transition/slide_top</item>
+        <item name="android:popupExitTransition">@android:transition/move</item>
+        <item name="android:textColor">@color/black_87_percent</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:dropDownWidth">wrap_content</item>
+        <item name="android:minWidth">20dp</item>
+        <item name="android:textStyle">normal</item>
+        <item name="android:letterSpacing">0.02</item>
+        <item name="android:lineSpacingExtra">6sp</item>
+        <item name="android:paddingStart">1dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:dropDownHorizontalOffset">4dp</item>
+        <item name="android:dropDownVerticalOffset">-30dp</item>
+        <item name="android:popupElevation">20dp</item>
+        <item name="android:elevation">0dp</item>
+    </style>
+
     <style name="ToastTextAppearance" parent="@style/TextAppearance">
         <item name="android:background">@android:color/transparent</item>
         <item name="android:textColor">@color/text_white</item>
         <item name="android:layout_marginStart">20dp</item>
         <item name="android:layout_marginEnd">20dp</item>
     </style>
+
     <style name="NoConnectivityWarning">
         <item name="android:background">@color/color_primary_dark</item>
+    </style>
+
+    <style name="AutofillRemoteViewSyle" parent="@style/AppTheme">
+        <item name="android:background">@color/background_white</item>
     </style>
 </resources>
